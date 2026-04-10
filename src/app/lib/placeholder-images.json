@@ -1,0 +1,17 @@
+
+{
+  "placeholderImages": [
+    {
+      "id": "hero-bg",
+      "description": "Professional team working together",
+      "imageUrl": "https://picsum.photos/seed/gigconnect-hero/1200/800",
+      "imageHint": "professional networking"
+    },
+    {
+      "id": "login-bg",
+      "description": "Abstract blue technology background",
+      "imageUrl": "https://picsum.photos/seed/gigconnect-login/800/600",
+      "imageHint": "abstract blue"
+    }
+  ]
+}
