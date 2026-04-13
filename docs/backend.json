@@ -238,10 +238,25 @@
         "artistId": {
           "type": "string"
         },
+        "price": {
+          "type": "number"
+        },
+        "message": {
+          "type": "string"
+        },
+        "songLinks": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "videoLink": {
+          "type": "string"
+        },
         "status": {
           "type": "string",
           "enum": [
-            "Pending",
+            "pending",
             "Reviewed",
             "Accepted",
             "Rejected"
@@ -256,7 +271,8 @@
         "applicationId",
         "eventId",
         "artistId",
-        "status"
+        "status",
+        "price"
       ]
     }
   },
@@ -282,9 +298,9 @@
       "schema": "Event",
       "description": "Musical event listings"
     },
-    "/applications/{applicationId}": {
+    "/events/{eventId}/applications/{applicationId}": {
       "schema": "Application",
-      "description": "Applications from artists to events"
+      "description": "Applications from artists to a specific event"
     }
   }
 }

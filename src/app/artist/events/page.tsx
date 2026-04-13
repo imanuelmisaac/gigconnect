@@ -1,10 +1,10 @@
 
 "use client"
 
-import { useMemo } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useUser, useFirestore, useCollection } from '@/firebase';
-import { collection, query, where, orderBy, doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { useUser, useFirestore, useCollection, useDoc } from '@/firebase';
+import { collection, query, where, orderBy, doc, setDoc, serverTimestamp, collectionGroup } from 'firebase/firestore';
 import { 
   Loader2, 
   Calendar, 
@@ -14,12 +14,18 @@ import {
   ArrowLeft,
   Music,
   CheckCircle2,
-  Clock
+  Clock,
+  Video,
+  Send
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import Link from 'next/link';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
@@ -29,6 +35,22 @@ export default function ArtistEventsPage() {
   const db = useFirestore();
   const router = useRouter();
   const { toast } = useToast();
+
+  const [selectedEvent, setSelectedEvent] = useState<any>(null);
+  const [isApplyDialogOpen, setIsApplyDialogOpen] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  
+  // Application Form State
+  const [proposedPrice, setProposedPrice] = useState('');
+  const [message, setMessage] = useState('');
+
+  // Fetch Artist Profile for auto-fill
+  const artistProfileRef = useMemo(() => {
+    if (!db || !user) return null;
+    return doc(db, 'artists', user.uid);
+  }, [db, user]);
+
+  const { data: artistProfile } = useDoc(artistProfileRef);
 
   const eventsQuery = useMemo(() => {
     if (!db) return null;
@@ -41,32 +63,39 @@ export default function ArtistEventsPage() {
 
   const { data: events, loading: eventsLoading } = useCollection(eventsQuery);
 
-  // We also need to know what the user has already applied for
-  const userApplicationsQuery = useMemo(() => {
-    if (!db || !user) return null;
-    return query(
-      collection(db, 'applications'),
-      where('artistId', '==', user.uid)
-    );
-  }, [db, user]);
+  // We check applications via collectionGroup for an overview or specific query if indexed
+  // For the MVP, we'll just check if the user has applied to specific events locally or via a simpler query
+  // Note: collectionGroup requires an index. For simplicity in MVP, we'll assume we check specific paths.
+  const [appliedEventIds, setAppliedEventIds] = useState<Set<string>>(new Set());
 
-  const { data: userApplications } = useCollection(userApplicationsQuery);
+  // Effect to handle dialog opening and auto-filling
+  useEffect(() => {
+    if (selectedEvent && artistProfile) {
+      setProposedPrice(artistProfile.bookingPrice?.toString() || '');
+    }
+  }, [selectedEvent, artistProfile]);
 
-  const appliedEventIds = useMemo(() => {
-    return new Set(userApplications?.map(app => (app as any).eventId) || []);
-  }, [userApplications]);
+  const handleOpenApply = (event: any) => {
+    setSelectedEvent(event);
+    setIsApplyDialogOpen(true);
+  };
 
-  const handleApply = (eventId: string) => {
-    if (!user || !db) return;
+  const handleApplySubmit = () => {
+    if (!user || !db || !selectedEvent || !artistProfile) return;
 
-    const applicationId = `${user.uid}_${eventId}`;
-    const appRef = doc(db, 'applications', applicationId);
+    setSubmitting(true);
+    const applicationId = user.uid; // One application per artist per event
+    const appRef = doc(db, 'events', selectedEvent.eventId, 'applications', applicationId);
 
     const applicationData = {
       applicationId,
-      eventId,
+      eventId: selectedEvent.eventId,
       artistId: user.uid,
-      status: 'Pending',
+      price: Number(proposedPrice),
+      message: message,
+      songLinks: artistProfile.songLinks || [],
+      videoLink: artistProfile.videoLink || '',
+      status: 'pending',
       createdAt: serverTimestamp(),
     };
 
@@ -74,8 +103,14 @@ export default function ArtistEventsPage() {
       .then(() => {
         toast({
           title: "Application Sent!",
-          description: "The gig maker will be notified of your interest.",
+          description: `You've applied for ${selectedEvent.title}.`,
         });
+        setIsApplyDialogOpen(false);
+        setSelectedEvent(null);
+        setProposedPrice('');
+        setMessage('');
+        // Update local state to reflect application
+        setAppliedEventIds(prev => new Set(prev).add(selectedEvent.eventId));
       })
       .catch(async (serverError) => {
         const permissionError = new FirestorePermissionError({
@@ -84,6 +119,9 @@ export default function ArtistEventsPage() {
           requestResourceData: applicationData,
         } satisfies SecurityRuleContext);
         errorEmitter.emit('permission-error', permissionError);
+      })
+      .finally(() => {
+        setSubmitting(false);
       });
   };
 
@@ -172,7 +210,7 @@ export default function ArtistEventsPage() {
                       className="w-full font-bold gap-2" 
                       variant={isApplied ? "secondary" : "default"}
                       disabled={isApplied}
-                      onClick={() => handleApply(event.eventId)}
+                      onClick={() => handleOpenApply(event)}
                     >
                       {isApplied ? (
                         <>Applied Successfully</>
@@ -202,6 +240,73 @@ export default function ArtistEventsPage() {
           </Card>
         )}
       </div>
+
+      {/* Application Dialog */}
+      <Dialog open={isApplyDialogOpen} onOpenChange={setIsApplyDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Send className="h-5 w-5 text-primary" />
+              Gig Application
+            </DialogTitle>
+            <DialogDescription>
+              Submit your interest for: <span className="font-bold text-foreground">{selectedEvent?.title}</span>
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-6 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="proposedPrice">Proposed Price ($)</Label>
+              <div className="relative">
+                <DollarSign className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                <Input 
+                  id="proposedPrice" 
+                  type="number" 
+                  placeholder="0.00" 
+                  className="pl-10"
+                  value={proposedPrice}
+                  onChange={(e) => setProposedPrice(e.target.value)}
+                />
+              </div>
+              <p className="text-[10px] text-muted-foreground">Budget range: ${selectedEvent?.minPrice} - ${selectedEvent?.maxPrice}</p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="message">Message to Gig Maker</Label>
+              <Textarea 
+                id="message" 
+                placeholder="Why are you the perfect fit for this event?" 
+                className="min-h-[100px]"
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+              />
+            </div>
+
+            <Card className="bg-secondary/20 border-none">
+              <CardHeader className="p-3 pb-0">
+                <CardTitle className="text-xs font-bold uppercase text-muted-foreground">Portfolio Auto-fill</CardTitle>
+              </CardHeader>
+              <CardContent className="p-3 space-y-2">
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <Music className="h-3 w-3" />
+                  <span>{artistProfile?.songLinks?.length || 0} Song links attached</span>
+                </div>
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <Video className="h-3 w-3" />
+                  <span>{artistProfile?.videoLink ? 'Performance video attached' : 'No video link found'}</span>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsApplyDialogOpen(false)}>Cancel</Button>
+            <Button className="bg-primary px-8" onClick={handleApplySubmit} disabled={submitting || !proposedPrice}>
+              {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Send Application'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
