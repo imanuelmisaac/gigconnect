@@ -1,4 +1,3 @@
-
 "use client"
 
 import { useEffect, useMemo } from 'react';
@@ -15,7 +14,6 @@ import {
   UserCheck, 
   AlertCircle,
   ExternalLink,
-  MessageCircle,
   MapPin,
   Briefcase,
   Search
@@ -25,6 +23,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
+import { WhatsAppButton } from '@/components/whatsapp-button';
 
 export default function ArtistDashboardPage() {
   const { user, loading: userLoading } = useUser();
@@ -57,7 +56,6 @@ export default function ArtistDashboardPage() {
 
     if (!profileLoading && artistProfile) {
       if (artistProfile.profileComplete === false) {
-        // Redirection logic for incomplete profile
         router.push('/artist/setup');
       }
     }
@@ -78,7 +76,6 @@ export default function ArtistDashboardPage() {
 
   return (
     <div className="min-h-screen bg-secondary/10 flex">
-      {/* Sidebar */}
       <aside className="w-64 bg-primary text-white hidden md:flex flex-col shrink-0">
         <div className="p-6 border-b border-white/10 flex items-center gap-2">
           <Music className="h-6 w-6 text-accent" />
@@ -108,7 +105,6 @@ export default function ArtistDashboardPage() {
         </div>
       </aside>
 
-      {/* Main Content */}
       <main className="flex-1 p-8 overflow-y-auto">
         <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
           <div>
@@ -130,16 +126,18 @@ export default function ArtistDashboardPage() {
             )}
             
             {artistProfile?.whatsappNumber && (
-              <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-full border shadow-sm text-sm font-medium">
-                <MessageCircle className="h-4 w-4 text-green-500" />
+              <WhatsAppButton 
+                phoneNumber={artistProfile.whatsappNumber} 
+                variant="ghost" 
+                className="bg-white rounded-full border shadow-sm h-9 px-4 text-xs font-bold text-green-600 hover:text-green-700 hover:bg-green-50"
+              >
                 {artistProfile.whatsappNumber}
-              </div>
+              </WhatsAppButton>
             )}
           </div>
         </header>
 
         <div className="grid lg:grid-cols-3 gap-8">
-          {/* Profile Summary */}
           <Card className="lg:col-span-1 border-none shadow-md overflow-hidden">
             <div className="h-24 bg-gradient-to-r from-primary to-accent" />
             <CardContent className="relative pt-0">
@@ -201,9 +199,7 @@ export default function ArtistDashboardPage() {
             </CardFooter>
           </Card>
 
-          {/* Main Dashboard Area */}
           <div className="lg:col-span-2 space-y-8">
-            {/* Call to Action */}
             <Card className="bg-primary text-white border-none shadow-lg overflow-hidden relative">
               <div className="absolute right-0 top-0 h-full w-1/3 opacity-10">
                 <Briefcase className="h-full w-full rotate-12" />
@@ -224,7 +220,6 @@ export default function ArtistDashboardPage() {
               </CardContent>
             </Card>
 
-            {/* My Applications */}
             <section className="space-y-4">
               <div className="flex items-center justify-between">
                 <h3 className="text-xl font-bold font-headline flex items-center gap-2">

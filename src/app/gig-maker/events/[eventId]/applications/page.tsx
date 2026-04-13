@@ -1,4 +1,3 @@
-
 "use client"
 
 import { useMemo } from 'react';
@@ -11,12 +10,11 @@ import {
   Music, 
   CheckCircle2, 
   XCircle, 
-  MessageCircle, 
-  Video, 
   ExternalLink,
   Calendar,
   MapPin,
-  DollarSign
+  DollarSign,
+  Video
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
@@ -26,6 +24,7 @@ import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
+import { WhatsAppButton } from '@/components/whatsapp-button';
 
 export default function GigMakerApplicationsPage() {
   const params = useParams();
@@ -55,7 +54,6 @@ export default function GigMakerApplicationsPage() {
     const appRef = doc(db, 'events', eventId, 'applications', appId);
     const updateData = { status, updatedAt: serverTimestamp() };
 
-    // Initiation of the write operation. We don't await here to leverage optimistic updates.
     updateDoc(appRef, updateData)
       .then(() => {
         toast({
@@ -198,15 +196,12 @@ export default function GigMakerApplicationsPage() {
                   </div>
                   
                   {app.artistWhatsapp && (
-                    <a 
-                      href={`https://wa.me/${app.artistWhatsapp.replace(/\D/g, '')}`} 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                    >
-                      <Button size="sm" variant="outline" className="border-green-500 text-green-600 hover:bg-green-50 font-bold gap-2">
-                        <MessageCircle className="h-4 w-4" /> Contact via WhatsApp
-                      </Button>
-                    </a>
+                    <WhatsAppButton 
+                      phoneNumber={app.artistWhatsapp} 
+                      message={`Hi ${app.artistName}, I'm interested in your application for the event "${event?.title}".`}
+                      variant="outline"
+                      className="border-green-500 text-green-600 hover:bg-green-50 font-bold"
+                    />
                   )}
                 </CardFooter>
               </Card>
@@ -215,7 +210,7 @@ export default function GigMakerApplicationsPage() {
             <Card className="border-dashed border-2 py-20 text-center">
               <CardContent className="space-y-4">
                 <div className="bg-primary/5 p-4 rounded-full w-fit mx-auto">
-                  <Briefcase className="h-12 w-12 text-primary/20" />
+                  <Music className="h-12 w-12 text-primary/20" />
                 </div>
                 <div>
                   <h2 className="text-xl font-bold">No applications yet</h2>
