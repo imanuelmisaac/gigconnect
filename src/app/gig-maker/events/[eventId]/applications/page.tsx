@@ -55,11 +55,12 @@ export default function GigMakerApplicationsPage() {
     const appRef = doc(db, 'events', eventId, 'applications', appId);
     const updateData = { status, updatedAt: serverTimestamp() };
 
+    // Initiation of the write operation. We don't await here to leverage optimistic updates.
     updateDoc(appRef, updateData)
       .then(() => {
         toast({
           title: `Application ${status}`,
-          description: `The artist has been notified of your decision.`,
+          description: `The artist has been marked as ${status.toLowerCase()}.`,
         });
       })
       .catch(async (serverError) => {
