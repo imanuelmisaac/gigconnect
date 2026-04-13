@@ -39,8 +39,7 @@ import {
   AlertDialogDescription, 
   AlertDialogFooter, 
   AlertDialogHeader, 
-  AlertDialogTitle,
-  AlertDialogTrigger
+  AlertDialogTitle
 } from '@/components/ui/alert-dialog';
 
 export default function GigMakerDashboardPage() {
@@ -48,6 +47,9 @@ export default function GigMakerDashboardPage() {
   const db = useFirestore();
   const router = useRouter();
   const { toast } = useToast();
+
+  const [eventToDelete, setEventToDelete] = useState<{ id: string, title: string } | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const gigMakerDocRef = useMemo(() => {
     if (!db || !user) return null;
@@ -75,9 +77,9 @@ export default function GigMakerDashboardPage() {
     });
   }, [rawEvents]);
 
-  // Cleanup logic
+  // Cleanup logic for old events
   useEffect(() => {
-    if (!events || events.length === 0) return;
+    if (!events || events.length === 0 || !db) return;
 
     const cleanupOldEvents = async () => {
       const now = new Date();
@@ -87,20 +89,26 @@ export default function GigMakerDashboardPage() {
       for (const event of events) {
         if (!event.date) continue;
         const eventDate = new Date(event.date);
+        // If the event finished more than 2 days ago
         if (now.getTime() - eventDate.getTime() > twoDaysInMs) {
           try {
+            const docId = event.id || event.eventId;
+            if (!docId) continue;
+
             // Delete event applications first
-            const appsRef = collection(db, 'events', event.eventId, 'applications');
+            const appsRef = collection(db, 'events', docId, 'applications');
             const appsSnap = await getDocs(appsRef);
-            const batch = writeBatch(db);
-            appsSnap.docs.forEach(doc => batch.delete(doc.ref));
-            await batch.commit();
+            if (!appsSnap.empty) {
+              const batch = writeBatch(db);
+              appsSnap.docs.forEach(d => batch.delete(d.ref));
+              await batch.commit();
+            }
             
             // Delete the event
-            await deleteDoc(doc(db, 'events', event.eventId));
+            await deleteDoc(doc(db, 'events', docId));
             deletedCount++;
           } catch (e) {
-            console.error("Failed to cleanup event:", event.eventId);
+            console.error("Failed to cleanup event:", event.id);
           }
         }
       }
@@ -116,20 +124,39 @@ export default function GigMakerDashboardPage() {
     cleanupOldEvents();
   }, [events, db, toast]);
 
-  const handleDeleteEvent = async (eventId: string) => {
+  const handleDeleteEvent = async () => {
+    if (!eventToDelete || !db) return;
+    
+    setIsDeleting(true);
+    const eventId = eventToDelete.id;
+
     try {
-      // Cleanup applications
+      // 1. Delete all applications for this event
       const appsRef = collection(db, 'events', eventId, 'applications');
       const appsSnap = await getDocs(appsRef);
-      const batch = writeBatch(db);
-      appsSnap.docs.forEach(doc => batch.delete(doc.ref));
-      await batch.commit();
+      
+      if (!appsSnap.empty) {
+        const batch = writeBatch(db);
+        appsSnap.docs.forEach(doc => batch.delete(doc.ref));
+        await batch.commit();
+      }
 
-      // Delete event
+      // 2. Delete the event itself
       await deleteDoc(doc(db, 'events', eventId));
-      toast({ title: "Event Deleted", description: "The event and its applications have been removed." });
+      
+      toast({ 
+        title: "Event Deleted", 
+        description: `"${eventToDelete.title}" and its applications have been removed.` 
+      });
+      setEventToDelete(null);
     } catch (e: any) {
-      toast({ variant: "destructive", title: "Error", description: e.message });
+      toast({ 
+        variant: "destructive", 
+        title: "Error", 
+        description: e.message || "Failed to delete event." 
+      });
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -146,6 +173,7 @@ export default function GigMakerDashboardPage() {
 
   return (
     <div className="min-h-screen bg-secondary/10 flex">
+      {/* Sidebar */}
       <aside className="w-64 bg-primary text-white hidden md:flex flex-col shrink-0">
         <div className="p-6 border-b border-white/10 flex items-center gap-2">
           <Building2 className="h-6 w-6 text-accent" />
@@ -159,7 +187,7 @@ export default function GigMakerDashboardPage() {
           <Link href="/gig-maker/artists" className="block">
             <Button variant="ghost" className="w-full justify-start text-white hover:bg-white/10">
               <Users className="mr-2 h-4 w-4" />
-              Browse Artists
+              Browse Talent
             </Button>
           </Link>
           <Button variant="ghost" className="w-full justify-start text-white hover:bg-white/10" onClick={() => router.push('/gig-maker/setup')}>
@@ -215,7 +243,7 @@ export default function GigMakerDashboardPage() {
                 <Calendar className="h-6 w-6" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Total Events</p>
+                <p className="text-sm text-muted-foreground">My Events</p>
                 <p className="text-2xl font-bold">{events?.length || 0}</p>
               </div>
             </CardContent>
@@ -237,8 +265,8 @@ export default function GigMakerDashboardPage() {
                 <CheckCircle className="h-6 w-6" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Confirmed</p>
-                <p className="text-2xl font-bold">Live</p>
+                <p className="text-sm text-muted-foreground">System Status</p>
+                <p className="text-xs font-bold text-green-600">Online & Active</p>
               </div>
             </CardContent>
           </Card>
@@ -248,15 +276,15 @@ export default function GigMakerDashboardPage() {
                 <Clock className="h-6 w-6" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">System Status</p>
-                <p className="text-2xl font-bold text-green-500">Active</p>
+                <p className="text-sm text-muted-foreground">Currency</p>
+                <p className="text-2xl font-bold text-primary">Pula (P)</p>
               </div>
             </CardContent>
           </Card>
         </div>
 
         <section className="space-y-4">
-          <h3 className="text-xl font-bold font-headline text-primary">Manage My Events</h3>
+          <h3 className="text-xl font-bold font-headline text-primary">Event Management</h3>
           <div className="grid gap-4">
             {eventsLoading ? (
               <div className="h-40 flex items-center justify-center bg-white rounded-xl border border-dashed">
@@ -280,45 +308,34 @@ export default function GigMakerDashboardPage() {
                     </div>
                     
                     <div className="flex flex-wrap items-center gap-2">
-                      <Badge variant="outline">{event.status}</Badge>
+                      <Badge variant={event.status === 'Open' ? 'default' : 'secondary'} className="text-[10px]">
+                        {event.status}
+                      </Badge>
                       <div className="h-8 w-px bg-border mx-2 hidden lg:block" />
                       
-                      <Link href={`/gig-maker/events/${event.eventId}/applications`}>
-                        <Button size="sm" className="bg-primary hover:bg-primary/90 gap-1 text-white">
-                          <Users className="h-4 w-4" />
-                          Applicants
+                      <Link href={`/gig-maker/events/${event.id}/applications`}>
+                        <Button size="sm" className="bg-primary hover:bg-primary/90 gap-1 text-white h-8">
+                          <Users className="h-3 w-3" />
+                          View Applicants
                         </Button>
                       </Link>
 
-                      <Link href={`/gig-maker/events/${event.eventId}/edit`}>
-                        <Button variant="ghost" size="sm" className="gap-1">
-                          <Edit className="h-4 w-4" />
+                      <Link href={`/gig-maker/events/${event.id}/edit`}>
+                        <Button variant="ghost" size="sm" className="gap-1 h-8">
+                          <Edit className="h-3 w-3" />
                           Edit
                         </Button>
                       </Link>
 
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive gap-1">
-                            <Trash2 className="h-4 w-4" />
-                            Delete
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              This will permanently delete the event "{event.title}" and all submitted applications.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction onClick={() => handleDeleteEvent(event.eventId)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                              Delete
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="text-destructive hover:text-destructive hover:bg-destructive/10 gap-1 h-8"
+                        onClick={() => setEventToDelete({ id: event.id, title: event.title })}
+                      >
+                        <Trash2 className="h-3 w-3" />
+                        Delete
+                      </Button>
                     </div>
                   </CardContent>
                 </Card>
@@ -332,7 +349,7 @@ export default function GigMakerDashboardPage() {
                     </div>
                     <div>
                       <h4 className="font-bold">No active events</h4>
-                      <p className="text-sm text-muted-foreground">Expired events are cleaned up after 2 days.</p>
+                      <p className="text-sm text-muted-foreground">Create your first event to start hiring.</p>
                     </div>
                     <Link href="/gig-maker/create-event">
                       <Button variant="outline" className="gap-2 border-primary text-primary">
@@ -346,6 +363,32 @@ export default function GigMakerDashboardPage() {
           </div>
         </section>
       </main>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={!!eventToDelete} onOpenChange={(open) => !open && setEventToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete the event <strong>"{eventToDelete?.title}"</strong> and all its applications. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={(e) => {
+                e.preventDefault();
+                handleDeleteEvent();
+              }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={isDeleting}
+            >
+              {isDeleting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+              {isDeleting ? "Deleting..." : "Permanently Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
