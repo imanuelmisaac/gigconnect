@@ -110,6 +110,43 @@
         "artistName",
         "profileComplete"
       ]
+    },
+    "GigMaker": {
+      "title": "Gig Maker",
+      "description": "Profile for business entities hiring talent",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string"
+        },
+        "businessName": {
+          "type": "string"
+        },
+        "role": {
+          "type": "string",
+          "enum": [
+            "Bar",
+            "Event Organizer"
+          ]
+        },
+        "location": {
+          "type": "string"
+        },
+        "whatsappNumber": {
+          "type": "string"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "userId",
+        "businessName",
+        "role",
+        "location",
+        "whatsappNumber"
+      ]
     }
   },
   "auth": {
@@ -125,6 +162,10 @@
     "/artists/{userId}": {
       "schema": "Artist",
       "description": "Detailed artist profile data"
+    },
+    "/gig-makers/{userId}": {
+      "schema": "GigMaker",
+      "description": "Gig maker business profile data"
     }
   }
 }
