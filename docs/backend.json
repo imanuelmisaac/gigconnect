@@ -1,4 +1,3 @@
-
 {
   "entities": {
     "User": {
@@ -312,5 +311,8 @@
       "schema": "Application",
       "description": "Applications from artists to a specific event"
     }
+  },
+  "_comments": {
+    "rules_applied": "2024-05-20: Security rules for profiles, events, and applications initialized."
   }
 }

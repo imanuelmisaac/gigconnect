@@ -3,7 +3,7 @@
 import { useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUser, useFirestore, useDoc, useCollection } from '@/firebase';
-import { doc, collection, query, where, orderBy } from 'firebase/firestore';
+import { doc, collectionGroup, query, where, orderBy } from 'firebase/firestore';
 import { 
   Loader2, 
   LayoutDashboard, 
@@ -37,10 +37,11 @@ export default function ArtistDashboardPage() {
 
   const { data: artistProfile, loading: profileLoading } = useDoc(artistDocRef);
 
+  // Use collectionGroup to find all applications belonging to this artist across all events
   const applicationsQuery = useMemo(() => {
     if (!db || !user) return null;
     return query(
-      collection(db, 'applications'),
+      collectionGroup(db, 'applications'),
       where('artistId', '==', user.uid),
       orderBy('createdAt', 'desc')
     );

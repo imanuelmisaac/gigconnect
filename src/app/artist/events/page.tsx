@@ -1,10 +1,9 @@
-
 "use client"
 
 import { useMemo, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUser, useFirestore, useCollection, useDoc } from '@/firebase';
-import { collection, query, where, orderBy, doc, setDoc, serverTimestamp, getDocs } from 'firebase/firestore';
+import { collection, query, where, orderBy, doc, setDoc, serverTimestamp, getDoc } from 'firebase/firestore';
 import { 
   Loader2, 
   Calendar, 
@@ -85,6 +84,7 @@ export default function ArtistEventsPage() {
       const deadlineDate = new Date(selectedEvent.applicationDeadline);
       deadlineDate.setHours(23, 59, 59, 999);
 
+      // 1. Check Deadline
       if (now > deadlineDate) {
         toast({
           variant: "destructive",
@@ -96,27 +96,24 @@ export default function ArtistEventsPage() {
         return;
       }
 
-      const appsRef = collection(db, 'events', selectedEvent.eventId, 'applications');
-      const appsSnap = await getDocs(appsRef);
+      // 2. Check if user already applied by attempting to get their specific document
+      // This is compatible with Security Rules that restrict list access
+      const appRef = doc(db, 'events', selectedEvent.eventId, 'applications', user.uid);
+      const appSnap = await getDoc(appRef);
       
-      const userHasAlreadyApplied = appsSnap.docs.some(d => d.id === user.uid);
-      
-      if (!userHasAlreadyApplied && appsSnap.size >= (selectedEvent.maxApplicants || Infinity)) {
+      if (appSnap.exists()) {
         toast({
-          variant: "destructive",
-          title: "Applications closed",
-          description: "This event has reached the maximum number of applicants allowed.",
+          title: "Already Applied",
+          description: "You have already submitted an application for this gig.",
         });
+        setAppliedEventIds(prev => new Set(prev).add(selectedEvent.eventId));
         setIsApplyDialogOpen(false);
         setSubmitting(false);
         return;
       }
 
-      const applicationId = user.uid;
-      const appRef = doc(db, 'events', selectedEvent.eventId, 'applications', applicationId);
-
       const applicationData = {
-        applicationId,
+        applicationId: user.uid,
         eventId: selectedEvent.eventId,
         artistId: user.uid,
         artistName: artistProfile.artistName || 'Unknown Artist',
