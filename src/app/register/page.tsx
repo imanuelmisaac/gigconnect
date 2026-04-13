@@ -34,11 +34,9 @@ export default function RegisterPage() {
 
     setLoading(true);
     try {
-      // 1. Create user with Firebase Auth
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
-      // 2. Save user profile to Firestore (Optimistic/Non-blocking)
       const userRef = doc(db, 'users', user.uid);
       setDoc(userRef, {
         userId: user.uid,
@@ -47,9 +45,6 @@ export default function RegisterPage() {
         firstName,
         lastName,
         createdAt: serverTimestamp(),
-      }).catch((err) => {
-        // Standard error handling as specific permission error system is not yet initialized
-        console.error("Firestore Error:", err);
       });
 
       toast({
@@ -57,8 +52,8 @@ export default function RegisterPage() {
         description: "Your account has been created.",
       });
 
-      // 3. Redirect based on role
-      router.push(`/setup/${role}`);
+      // Redirect to the role-specific setup page
+      router.push(`/${role}/setup`);
     } catch (error: any) {
       toast({
         variant: "destructive",
@@ -158,9 +153,6 @@ export default function RegisterPage() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                   />
-                </div>
-                <div className="text-xs text-muted-foreground">
-                  By clicking Register, you agree to our Terms of Service and Privacy Policy.
                 </div>
               </CardContent>
               <CardFooter className="flex flex-col gap-4">

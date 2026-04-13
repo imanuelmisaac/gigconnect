@@ -35,6 +35,81 @@
         "role",
         "createdAt"
       ]
+    },
+    "Artist": {
+      "title": "Artist",
+      "description": "Detailed professional profile for an artist",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string"
+        },
+        "fullName": {
+          "type": "string"
+        },
+        "artistName": {
+          "type": "string"
+        },
+        "dob": {
+          "type": "string",
+          "format": "date"
+        },
+        "idNumber": {
+          "type": "string"
+        },
+        "genres": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "location": {
+          "type": "string"
+        },
+        "bio": {
+          "type": "string"
+        },
+        "bookingPrice": {
+          "type": "number"
+        },
+        "featurePrice": {
+          "type": "number"
+        },
+        "whatsappNumber": {
+          "type": "string"
+        },
+        "songLinks": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "videoLink": {
+          "type": "string"
+        },
+        "idFrontUrl": {
+          "type": "string"
+        },
+        "idBackUrl": {
+          "type": "string"
+        },
+        "profilePictureUrl": {
+          "type": "string"
+        },
+        "profileComplete": {
+          "type": "boolean"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "userId",
+        "fullName",
+        "artistName",
+        "profileComplete"
+      ]
     }
   },
   "auth": {
@@ -46,6 +121,10 @@
     "/users/{userId}": {
       "schema": "User",
       "description": "User profile documents stored by Auth UID"
+    },
+    "/artists/{userId}": {
+      "schema": "Artist",
+      "description": "Detailed artist profile data"
     }
   }
 }
