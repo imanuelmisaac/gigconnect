@@ -1,10 +1,10 @@
 
 "use client"
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth, useFirestore, useStorage, useUser } from '@/firebase';
-import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { useUser, useFirestore, useStorage } from '@/firebase';
+import { doc, setDoc, serverTimestamp, getDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -12,8 +12,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Briefcase, Upload, Music, Video, User, Check, Loader2, ArrowRight } from 'lucide-react';
+import { Progress } from '@/components/ui/progress';
+import { Briefcase, Upload, Music, Video, User, Check, Loader2, AlertCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 const GENRES = [
   "Pop", "Rock", "Hip Hop", "Jazz", "Classical", 
@@ -54,6 +56,38 @@ export default function ArtistSetupPage() {
     idBack: null,
     profilePic: null,
   });
+
+  // Calculate Completion Progress
+  const completionStats = useMemo(() => {
+    const requiredFields = [
+      formData.fullName,
+      formData.artistName,
+      formData.dob,
+      formData.idNumber,
+      formData.location,
+      formData.bio,
+      formData.bookingPrice,
+      formData.whatsappNumber,
+    ];
+    
+    const requiredFiles = [
+      files.idFront,
+      files.idBack,
+      files.profilePic
+    ];
+
+    const filledFieldsCount = requiredFields.filter(field => field && field.trim().length > 0).length;
+    const filledFilesCount = requiredFiles.filter(file => file !== null).length;
+    const genresFilled = formData.genres.length > 0 ? 1 : 0;
+
+    const totalRequired = requiredFields.length + requiredFiles.length + 1; // +1 for genres
+    const totalFilled = filledFieldsCount + filledFilesCount + genresFilled;
+    
+    const percentage = Math.round((totalFilled / totalRequired) * 100);
+    const isComplete = percentage === 100;
+
+    return { percentage, isComplete };
+  }, [formData, files]);
 
   useEffect(() => {
     if (!userLoading && !user) {
@@ -97,6 +131,7 @@ export default function ArtistSetupPage() {
       let idBackUrl = '';
       let profilePictureUrl = '';
 
+      // Only upload if new files are selected
       if (files.idFront) idFrontUrl = await uploadFile(files.idFront, `artists/${user.uid}/id_front`);
       if (files.idBack) idBackUrl = await uploadFile(files.idBack, `artists/${user.uid}/id_back`);
       if (files.profilePic) profilePictureUrl = await uploadFile(files.profilePic, `artists/${user.uid}/profile_pic`);
@@ -118,18 +153,22 @@ export default function ArtistSetupPage() {
         idFrontUrl,
         idBackUrl,
         profilePictureUrl,
-        profileComplete: false,
-        createdAt: serverTimestamp(),
+        profileComplete: completionStats.isComplete,
+        updatedAt: serverTimestamp(),
       };
 
-      await setDoc(doc(db, 'artists', user.uid), artistData);
+      await setDoc(doc(db, 'artists', user.uid), artistData, { merge: true });
 
       toast({
-        title: "Profile Saved",
-        description: "Your artist profile has been created successfully.",
+        title: completionStats.isComplete ? "Profile Complete!" : "Progress Saved",
+        description: completionStats.isComplete 
+          ? "You can now access your artist dashboard." 
+          : "Your progress has been saved. Please complete the remaining fields.",
       });
 
-      router.push('/artist/dashboard');
+      if (completionStats.isComplete) {
+        router.push('/artist/dashboard');
+      }
     } catch (error: any) {
       toast({
         variant: "destructive",
@@ -152,6 +191,24 @@ export default function ArtistSetupPage() {
   return (
     <div className="min-h-screen bg-secondary/10 py-12 px-4">
       <div className="max-w-4xl mx-auto space-y-8">
+        
+        {/* Progress Header */}
+        <Card className="sticky top-4 z-20 border-primary/20 shadow-lg bg-background/95 backdrop-blur">
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-semibold text-primary uppercase tracking-wider">Profile Completion</span>
+              <span className="text-sm font-bold text-primary">{completionStats.percentage}%</span>
+            </div>
+            <Progress value={completionStats.percentage} className="h-3" />
+            {!completionStats.isComplete && (
+              <p className="text-xs text-muted-foreground mt-2 flex items-center gap-1">
+                <AlertCircle className="h-3 w-3" />
+                Required: All basic info, genres, bio, booking price, WhatsApp, and all 3 images.
+              </p>
+            )}
+          </CardContent>
+        </Card>
+
         <div className="text-center space-y-2">
           <div className="flex justify-center">
             <div className="bg-primary p-3 rounded-xl shadow-lg text-white">
@@ -171,7 +228,7 @@ export default function ArtistSetupPage() {
                   <User className="h-5 w-5 text-primary" />
                   Basic Information
                 </CardTitle>
-                <CardDescription>Personal and identity details</CardDescription>
+                <CardDescription>Personal and identity details (Required)</CardDescription>
               </CardHeader>
               <CardContent className="grid md:grid-cols-2 gap-6 pt-6">
                 <div className="space-y-2">
@@ -204,7 +261,10 @@ export default function ArtistSetupPage() {
               </CardHeader>
               <CardContent className="space-y-6 pt-6">
                 <div className="space-y-3">
-                  <Label>Genres (Select all that apply)</Label>
+                  <Label className="flex items-center gap-2">
+                    Genres (Select at least one)
+                    {formData.genres.length === 0 && <span className="text-destructive text-xs font-bold">* Required</span>}
+                  </Label>
                   <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
                     {GENRES.map(genre => (
                       <div key={genre} className="flex items-center space-x-2 bg-background p-2 rounded-md border border-input hover:border-primary transition-colors cursor-pointer">
@@ -248,7 +308,7 @@ export default function ArtistSetupPage() {
               <CardHeader className="bg-primary/5 border-b">
                 <CardTitle className="flex items-center gap-2 text-xl">
                   <Video className="h-5 w-5 text-primary" />
-                  Portfolio Links
+                  Portfolio Links (Optional)
                 </CardTitle>
                 <CardDescription>Share your best work</CardDescription>
               </CardHeader>
@@ -279,24 +339,24 @@ export default function ArtistSetupPage() {
               <CardHeader className="bg-primary/5 border-b">
                 <CardTitle className="flex items-center gap-2 text-xl">
                   <Upload className="h-5 w-5 text-primary" />
-                  Media Uploads
+                  Media Uploads (Required)
                 </CardTitle>
                 <CardDescription>Upload necessary documents and photos</CardDescription>
               </CardHeader>
               <CardContent className="grid md:grid-cols-3 gap-6 pt-6">
                 <div className="space-y-2">
                   <Label>Profile Picture</Label>
-                  <div className="flex flex-col items-center justify-center border-2 border-dashed rounded-lg p-6 hover:bg-accent transition-colors">
+                  <div className={`flex flex-col items-center justify-center border-2 border-dashed rounded-lg p-6 hover:bg-accent transition-colors ${!files.profilePic ? 'border-destructive/30' : 'border-primary/30'}`}>
                     <Upload className="h-8 w-8 text-muted-foreground mb-2" />
                     <Input type="file" className="hidden" id="profile-pic" accept="image/*" onChange={(e) => handleFileChange(e, 'profilePic')} />
                     <Label htmlFor="profile-pic" className="cursor-pointer text-sm font-bold text-primary">
-                      {files.profilePic ? files.profilePic.name : 'Choose File'}
+                      {files.profilePic ? files.profilePic.name : 'Choose Image'}
                     </Label>
                   </div>
                 </div>
                 <div className="space-y-2">
                   <Label>ID Front Side</Label>
-                  <div className="flex flex-col items-center justify-center border-2 border-dashed rounded-lg p-6 hover:bg-accent transition-colors">
+                  <div className={`flex flex-col items-center justify-center border-2 border-dashed rounded-lg p-6 hover:bg-accent transition-colors ${!files.idFront ? 'border-destructive/30' : 'border-primary/30'}`}>
                     <Upload className="h-8 w-8 text-muted-foreground mb-2" />
                     <Input type="file" className="hidden" id="id-front" accept="image/*" onChange={(e) => handleFileChange(e, 'idFront')} />
                     <Label htmlFor="id-front" className="cursor-pointer text-sm font-bold text-primary">
@@ -306,7 +366,7 @@ export default function ArtistSetupPage() {
                 </div>
                 <div className="space-y-2">
                   <Label>ID Back Side</Label>
-                  <div className="flex flex-col items-center justify-center border-2 border-dashed rounded-lg p-6 hover:bg-accent transition-colors">
+                  <div className={`flex flex-col items-center justify-center border-2 border-dashed rounded-lg p-6 hover:bg-accent transition-colors ${!files.idBack ? 'border-destructive/30' : 'border-primary/30'}`}>
                     <Upload className="h-8 w-8 text-muted-foreground mb-2" />
                     <Input type="file" className="hidden" id="id-back" accept="image/*" onChange={(e) => handleFileChange(e, 'idBack')} />
                     <Label htmlFor="id-back" className="cursor-pointer text-sm font-bold text-primary">
@@ -317,18 +377,18 @@ export default function ArtistSetupPage() {
               </CardContent>
             </Card>
 
-            <div className="flex justify-end gap-4 pb-12">
+            <div className="flex flex-col sm:flex-row justify-end gap-4 pb-12">
               <Button type="button" variant="outline" onClick={() => router.back()}>Cancel</Button>
               <Button type="submit" className="px-12 h-11 text-lg bg-primary" disabled={loading}>
                 {loading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Saving Profile...
+                    Saving...
                   </>
                 ) : (
                   <>
-                    Complete Setup
-                    <Check className="ml-2 h-5 w-5" />
+                    {completionStats.isComplete ? 'Complete Setup' : 'Save Progress'}
+                    {completionStats.isComplete ? <Check className="ml-2 h-5 w-5" /> : null}
                   </>
                 )}
               </Button>
