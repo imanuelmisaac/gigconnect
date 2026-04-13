@@ -1,0 +1,246 @@
+
+"use client"
+
+import { useState, useMemo } from 'react';
+import { useFirestore, useCollection } from '@/firebase';
+import { collection, query, where } from 'firebase/firestore';
+import { 
+  Loader2, 
+  Search, 
+  MapPin, 
+  Music, 
+  DollarSign, 
+  ArrowLeft,
+  Filter,
+  Users
+} from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Badge } from '@/components/ui/badge';
+import { Slider } from '@/components/ui/slider';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import Link from 'next/link';
+import { WhatsAppButton } from '@/components/whatsapp-button';
+
+const GENRES = [
+  "All Genres", "Pop", "Rock", "Hip Hop", "Jazz", "Classical", 
+  "Electronic", "R&B", "Country", "Reggae", "Folk"
+];
+
+export default function BrowseArtistsPage() {
+  const db = useFirestore();
+  
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedGenre, setSelectedGenre] = useState('All Genres');
+  const [maxPrice, setMaxPrice] = useState(5000);
+
+  const artistsQuery = useMemo(() => {
+    if (!db) return null;
+    // We only show artists who have completed their profile
+    return query(collection(db, 'artists'), where('profileComplete', '==', true));
+  }, [db]);
+
+  const { data: artists, loading } = useCollection(artistsQuery);
+
+  const filteredArtists = useMemo(() => {
+    if (!artists) return [];
+    
+    return artists.filter((artist: any) => {
+      const matchesSearch = (artist.artistName || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          (artist.fullName || '').toLowerCase().includes(searchQuery.toLowerCase());
+      
+      const matchesGenre = selectedGenre === 'All Genres' || 
+                          (artist.genres && artist.genres.includes(selectedGenre));
+      
+      const matchesPrice = (artist.bookingPrice || 0) <= maxPrice;
+      
+      return matchesSearch && matchesGenre && matchesPrice;
+    });
+  }, [artists, searchQuery, selectedGenre, maxPrice]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-secondary/10">
+        <Loader2 className="h-10 w-10 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-secondary/10 py-12 px-4">
+      <div className="max-w-7xl mx-auto space-y-8">
+        <header className="space-y-4">
+          <Link href="/gig-maker/dashboard" className="inline-flex items-center text-sm text-muted-foreground hover:text-primary transition-colors">
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back to Dashboard
+          </Link>
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div>
+              <h1 className="text-4xl font-bold text-primary font-headline">Browse Artists</h1>
+              <p className="text-muted-foreground">Find the perfect talent for your next event.</p>
+            </div>
+            <Badge variant="outline" className="px-4 py-1 text-sm bg-white font-bold">
+              {filteredArtists.length} Artists Found
+            </Badge>
+          </div>
+        </header>
+
+        <div className="grid lg:grid-cols-4 gap-8">
+          {/* Filters Sidebar */}
+          <aside className="lg:col-span-1 space-y-6">
+            <Card className="border-none shadow-md sticky top-24">
+              <CardHeader className="pb-4">
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Filter className="h-4 w-4 text-accent" />
+                  Filter Talent
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="space-y-2">
+                  <Label htmlFor="search">Search Name</Label>
+                  <div className="relative">
+                    <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                    <Input 
+                      id="search" 
+                      placeholder="Artist or stage name..." 
+                      className="pl-10"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Genre</Label>
+                  <Select onValueChange={setSelectedGenre} defaultValue={selectedGenre}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select genre" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {GENRES.map(genre => (
+                        <SelectItem key={genre} value={genre}>{genre}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="flex justify-between">
+                    <Label>Max Budget ($)</Label>
+                    <span className="text-xs font-bold text-primary">${maxPrice}</span>
+                  </div>
+                  <Slider 
+                    defaultValue={[maxPrice]} 
+                    max={5000} 
+                    step={50}
+                    onValueChange={(vals) => setMaxPrice(vals[0])}
+                  />
+                  <p className="text-[10px] text-muted-foreground text-center">Adjust to match your event budget</p>
+                </div>
+              </CardContent>
+              <CardFooter className="pt-0">
+                <Button 
+                  variant="ghost" 
+                  className="w-full text-xs text-muted-foreground"
+                  onClick={() => {
+                    setSearchQuery('');
+                    setSelectedGenre('All Genres');
+                    setMaxPrice(5000);
+                  }}
+                >
+                  Reset All Filters
+                </Button>
+              </CardFooter>
+            </Card>
+          </aside>
+
+          {/* Artist Grid */}
+          <div className="lg:col-span-3">
+            {filteredArtists.length > 0 ? (
+              <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-6">
+                {filteredArtists.map((artist: any) => (
+                  <Card key={artist.id} className="border-none shadow-sm hover:shadow-md transition-all overflow-hidden flex flex-col group">
+                    <div className="h-20 bg-gradient-to-br from-primary/80 to-accent/80" />
+                    <CardHeader className="relative pt-0 flex flex-col items-center">
+                      <div className="flex justify-center -mt-10 mb-3">
+                        <Avatar className="h-20 w-20 border-4 border-white shadow-md">
+                          <AvatarImage src={artist.profilePictureUrl} />
+                          <AvatarFallback className="bg-secondary text-primary font-bold text-xl">
+                            {artist.artistName?.substring(0, 2).toUpperCase() || 'AR'}
+                          </AvatarFallback>
+                        </Avatar>
+                      </div>
+                      <CardTitle className="text-xl font-headline text-center group-hover:text-primary transition-colors">
+                        {artist.artistName}
+                      </CardTitle>
+                      <div className="flex items-center text-xs text-muted-foreground gap-1 mt-1">
+                        <MapPin className="h-3 w-3" />
+                        {artist.location}
+                      </div>
+                    </CardHeader>
+                    <CardContent className="flex-1 space-y-4 text-center">
+                      <div className="flex flex-wrap justify-center gap-1.5">
+                        {artist.genres?.map((genre: string) => (
+                          <Badge key={genre} variant="secondary" className="text-[10px] py-0">
+                            {genre}
+                          </Badge>
+                        ))}
+                      </div>
+                      
+                      <p className="text-sm text-muted-foreground line-clamp-2 italic px-2">
+                        "{artist.bio || 'Professional artist ready for booking.'}"
+                      </p>
+
+                      <div className="flex items-center justify-center gap-4 pt-2">
+                        <div className="text-center">
+                          <p className="text-[10px] uppercase font-bold text-muted-foreground tracking-tighter">Booking</p>
+                          <p className="font-bold text-green-600">${artist.bookingPrice}</p>
+                        </div>
+                        <div className="h-8 w-px bg-border" />
+                        <div className="text-center">
+                          <p className="text-[10px] uppercase font-bold text-muted-foreground tracking-tighter">Features</p>
+                          <p className="font-bold text-primary">${artist.featurePrice || 'N/A'}</p>
+                        </div>
+                      </div>
+                    </CardContent>
+                    <CardFooter className="bg-muted/30 pt-4 gap-2">
+                      <WhatsAppButton 
+                        phoneNumber={artist.whatsappNumber}
+                        message={`Hi ${artist.artistName}, I saw your profile on GigConnect and I'm interested in booking you for an upcoming event.`}
+                        className="flex-1 bg-green-600 hover:bg-green-700 text-white border-none font-bold"
+                      >
+                        Contact
+                      </WhatsAppButton>
+                    </CardFooter>
+                  </Card>
+                ))}
+              </div>
+            ) : (
+              <Card className="border-dashed border-2 py-32 text-center bg-transparent">
+                <CardContent className="space-y-4">
+                  <div className="bg-primary/5 p-4 rounded-full w-fit mx-auto">
+                    <Users className="h-12 w-12 text-primary/20" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-bold">No artists match your search</h2>
+                    <p className="text-muted-foreground">Try adjusting your filters or checking back later.</p>
+                  </div>
+                  <Button variant="link" onClick={() => {
+                    setSearchQuery('');
+                    setSelectedGenre('All Genres');
+                    setMaxPrice(5000);
+                  }}>
+                    Clear all filters
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

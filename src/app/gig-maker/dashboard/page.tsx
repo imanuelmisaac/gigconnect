@@ -20,7 +20,8 @@ import {
   ArrowRight,
   MapPin,
   MessageCircle,
-  ChevronRight
+  ChevronRight,
+  Search
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -79,6 +80,12 @@ export default function GigMakerDashboardPage() {
             <LayoutDashboard className="mr-2 h-4 w-4" />
             Dashboard
           </Button>
+          <Link href="/gig-maker/artists" className="block">
+            <Button variant="ghost" className="w-full justify-start text-white hover:bg-white/10">
+              <Users className="mr-2 h-4 w-4" />
+              Browse Artists
+            </Button>
+          </Link>
           <Button variant="ghost" className="w-full justify-start text-white hover:bg-white/10">
             <Calendar className="mr-2 h-4 w-4" />
             My Events
@@ -103,12 +110,20 @@ export default function GigMakerDashboardPage() {
             <p className="text-muted-foreground">{profile?.businessName || 'Your Business'}</p>
           </div>
           
-          <Link href="/gig-maker/create-event">
-            <Button className="bg-accent hover:bg-accent/90 text-white font-bold gap-2">
-              <Plus className="h-5 w-5" />
-              Create Event
-            </Button>
-          </Link>
+          <div className="flex gap-2">
+            <Link href="/gig-maker/artists">
+              <Button variant="outline" className="font-bold gap-2">
+                <Search className="h-4 w-4" />
+                Find Talent
+              </Button>
+            </Link>
+            <Link href="/gig-maker/create-event">
+              <Button className="bg-accent hover:bg-accent/90 text-white font-bold gap-2">
+                <Plus className="h-5 w-5" />
+                Create Event
+              </Button>
+            </Link>
+          </div>
         </header>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
