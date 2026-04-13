@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { useUser, useFirestore, useDoc } from '@/firebase';
 import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
@@ -30,6 +30,7 @@ export default function EditEventPage() {
   const { toast } = useToast();
 
   const [saving, setSaving] = useState(false);
+  const [isInitialized, setIsInitialized] = useState(false);
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -44,11 +45,16 @@ export default function EditEventPage() {
     status: 'Open'
   });
 
-  const { data: event, loading: eventLoading } = useDoc(eventId ? doc(db, 'events', eventId) : null);
+  const eventRef = useMemo(() => {
+    if (!db || !eventId) return null;
+    return doc(db, 'events', eventId);
+  }, [db, eventId]);
+
+  const { data: event, loading: eventLoading } = useDoc(eventRef);
 
   useEffect(() => {
-    if (event) {
-      if (event.gigMakerId !== user?.uid && !userLoading) {
+    if (event && !isInitialized) {
+      if (event.gigMakerId !== user?.uid && !userLoading && user) {
         router.push('/gig-maker/dashboard');
         return;
       }
@@ -65,8 +71,9 @@ export default function EditEventPage() {
         genres: event.genres || [],
         status: event.status || 'Open'
       });
+      setIsInitialized(true);
     }
-  }, [event, user, userLoading, router]);
+  }, [event, user, userLoading, router, isInitialized]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { id, value } = e.target;
@@ -92,8 +99,8 @@ export default function EditEventPage() {
 
     setSaving(true);
     try {
-      const eventRef = doc(db, 'events', eventId);
-      await updateDoc(eventRef, {
+      const ref = doc(db, 'events', eventId);
+      await updateDoc(ref, {
         ...formData,
         maxApplicants: Number(formData.maxApplicants),
         minPrice: Number(formData.minPrice),
