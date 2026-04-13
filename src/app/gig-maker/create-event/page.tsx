@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -16,7 +17,7 @@ import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
 
 const GENRES = [
-  "Pop", "Rock", "Hip Hop", "Jazz", "Classical", 
+  "Amapiano", "Afrobeats", "Afropop", "Pop", "Rock", "Hip Hop", "Jazz", "Classical", 
   "Electronic", "R&B", "Country", "Reggae", "Folk"
 ];
 
@@ -136,7 +137,7 @@ export default function CreateEventPage() {
 
         <div className="space-y-2">
           <h1 className="text-3xl font-bold tracking-tight text-primary font-headline">Create New Event</h1>
-          <p className="text-muted-foreground">Fill in the details to find the perfect artist for your gig.</p>
+          <p className="text-muted-foreground">Fill in the details to find the perfect talent for your gig.</p>
         </div>
 
         <form onSubmit={handleSubmit}>
@@ -149,7 +150,7 @@ export default function CreateEventPage() {
               <CardContent className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="title">Event Name</Label>
-                  <Input id="title" placeholder="e.g. Gabs Live Festival" required value={formData.title} onChange={handleInputChange} />
+                  <Input id="title" placeholder="e.g. Afrobeat Night" required value={formData.title} onChange={handleInputChange} />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="description">Description</Label>
@@ -195,7 +196,7 @@ export default function CreateEventPage() {
                 </div>
 
                 <div className="space-y-3">
-                  <Label>Required Genres (Select all that apply)</Label>
+                  <Label>Required Genres (Amapiano, Afrobeats, etc.)</Label>
                   <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
                     {GENRES.map(genre => (
                       <div key={genre} className="flex items-center space-x-2 bg-background p-2 rounded-md border border-input hover:border-primary transition-colors cursor-pointer">

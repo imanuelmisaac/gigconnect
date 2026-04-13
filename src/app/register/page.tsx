@@ -18,7 +18,7 @@ import { useToast } from '@/hooks/use-toast';
 export default function RegisterPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [role, setRole] = useState<'artist' | 'gig-maker'>('artist');
+  const [role, setRole] = useState<'artist' | 'gig-maker' | 'dj'>('artist');
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [loading, setLoading] = useState(false);
@@ -38,7 +38,7 @@ export default function RegisterPage() {
       const user = userCredential.user;
 
       const userRef = doc(db, 'users', user.uid);
-      setDoc(userRef, {
+      await setDoc(userRef, {
         userId: user.uid,
         email: user.email,
         role: role,
@@ -52,8 +52,9 @@ export default function RegisterPage() {
         description: "Your account has been created.",
       });
 
-      // Redirect to the role-specific setup page
-      router.push(`/${role}/setup`);
+      // Redirect DJs to the same talent setup as artists
+      const setupPath = role === 'gig-maker' ? '/gig-maker/setup' : '/artist/setup';
+      router.push(setupPath);
     } catch (error: any) {
       toast({
         variant: "destructive",
@@ -125,8 +126,9 @@ export default function RegisterPage() {
                       <SelectValue placeholder="Select your role" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="artist">Artist</SelectItem>
-                      <SelectItem value="gig-maker">Gig Maker</SelectItem>
+                      <SelectItem value="artist">Musician / Artist</SelectItem>
+                      <SelectItem value="dj">Disc Jockey (DJ)</SelectItem>
+                      <SelectItem value="gig-maker">Gig Maker / Business</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

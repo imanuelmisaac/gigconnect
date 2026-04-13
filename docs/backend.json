@@ -1,3 +1,4 @@
+
 {
   "entities": {
     "User": {
@@ -18,7 +19,8 @@
           "type": "string",
           "enum": [
             "artist",
-            "gig-maker"
+            "gig-maker",
+            "dj"
           ],
           "description": "The professional role of the user"
         },
@@ -37,7 +39,7 @@
     },
     "Artist": {
       "title": "Artist",
-      "description": "Detailed professional profile for an artist",
+      "description": "Detailed professional profile for an artist or DJ",
       "type": "object",
       "properties": {
         "userId": {
@@ -297,7 +299,7 @@
     },
     "/artists/{userId}": {
       "schema": "Artist",
-      "description": "Detailed artist profile data"
+      "description": "Detailed artist or DJ profile data"
     },
     "/gig-makers/{userId}": {
       "schema": "GigMaker",
@@ -311,8 +313,5 @@
       "schema": "Application",
       "description": "Applications from artists to a specific event"
     }
-  },
-  "_comments": {
-    "rules_applied": "2024-05-20: Security rules for profiles, events, and applications initialized."
   }
 }

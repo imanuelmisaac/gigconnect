@@ -1,3 +1,4 @@
+
 rules_version = '2';
 
 service cloud.firestore {
@@ -13,46 +14,40 @@ service cloud.firestore {
       return request.auth.uid == userId;
     }
 
-    // Users Collection: Users only manage their own core profile
+    // Users Collection
     match /users/{userId} {
       allow read, write: if isSignedIn() && isOwner(userId);
     }
 
-    // Artists Collection: Artists manage their own profile. Anyone can read to discover talent.
+    // Artists/DJs Collection: Both roles share the same collection for talent discovery
     match /artists/{userId} {
       allow read: if isSignedIn();
       allow write: if isSignedIn() && isOwner(userId);
     }
 
-    // Gig Makers Collection: Business profiles. Anyone can read. Owner manages.
+    // Gig Makers Collection
     match /gig-makers/{userId} {
       allow read: if isSignedIn();
       allow write: if isSignedIn() && isOwner(userId);
     }
 
-    // Events Collection:
+    // Events Collection
     match /events/{eventId} {
-      // Anyone signed in can view events
       allow read: if isSignedIn();
-      // Only the creator can manage the event
       allow create: if isSignedIn() && request.resource.data.gigMakerId == request.auth.uid;
       allow update, delete: if isSignedIn() && resource.data.gigMakerId == request.auth.uid;
 
-      // Applications Sub-collection
       match /applications/{applicationId} {
-        // Artist can read their own app. Gig Maker can read apps for their event.
         allow read: if isSignedIn() && (
           isOwner(applicationId) || 
           isOwner(get(/databases/$(database)/documents/events/$(eventId)).data.gigMakerId)
         );
 
-        // Create: Artist can apply if event is Open and they are the owner
         allow create: if isSignedIn() && 
           isOwner(applicationId) && 
           request.resource.data.artistId == request.auth.uid &&
           get(/databases/$(database)/documents/events/$(eventId)).data.status == 'Open';
 
-        // Update: Gig Maker can update status (Accepted/Rejected).
         allow update: if isSignedIn() && (
           isOwner(get(/databases/$(database)/documents/events/$(eventId)).data.gigMakerId)
         );
@@ -61,7 +56,6 @@ service cloud.firestore {
       }
     }
     
-    // Collection Group rule for applications (for Artist Dashboard status tracking)
     match /{path=**}/applications/{applicationId} {
       allow read, list: if isSignedIn() && isOwner(applicationId);
     }

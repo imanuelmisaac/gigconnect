@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useState, useEffect, useMemo } from 'react';
@@ -15,7 +16,7 @@ import { Briefcase, Upload, Music, Video, User, Check, Loader2, AlertCircle } fr
 import { useToast } from '@/hooks/use-toast';
 
 const GENRES = [
-  "Pop", "Rock", "Hip Hop", "Jazz", "Classical", 
+  "Amapiano", "Afrobeats", "Afropop", "Pop", "Rock", "Hip Hop", "Jazz", "Classical", 
   "Electronic", "R&B", "Country", "Reggae", "Folk"
 ];
 
@@ -53,7 +54,6 @@ export default function ArtistSetupPage() {
     profilePic: null,
   });
 
-  // Calculate Completion Progress
   const completionStats = useMemo(() => {
     const requiredFields = [
       formData.fullName,
@@ -76,7 +76,7 @@ export default function ArtistSetupPage() {
     const filledFilesCount = requiredFiles.filter(file => file !== null).length;
     const genresFilled = formData.genres.length > 0 ? 1 : 0;
 
-    const totalRequired = requiredFields.length + requiredFiles.length + 1; // +1 for genres
+    const totalRequired = requiredFields.length + requiredFiles.length + 1;
     const totalFilled = filledFieldsCount + filledFilesCount + genresFilled;
     
     const percentage = Math.round((totalFilled / totalRequired) * 100);
@@ -117,7 +117,6 @@ export default function ArtistSetupPage() {
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>, key: keyof typeof files) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
-      // Limit size to ~500KB to prevent Firestore document size limits (max 1MB)
       if (file.size > 500 * 1024) {
         toast({
           variant: "destructive",
@@ -171,7 +170,7 @@ export default function ArtistSetupPage() {
       toast({
         title: completionStats.isComplete ? "Profile Complete!" : "Progress Saved",
         description: completionStats.isComplete 
-          ? "You can now access your artist dashboard." 
+          ? "You can now access your talent dashboard." 
           : "Your progress has been saved. Please complete the remaining fields.",
       });
 
@@ -201,7 +200,6 @@ export default function ArtistSetupPage() {
     <div className="min-h-screen bg-secondary/10 py-12 px-4">
       <div className="max-w-4xl mx-auto space-y-8">
         
-        {/* Progress Header */}
         <Card className="sticky top-4 z-20 border-primary/20 shadow-lg bg-background/95 backdrop-blur">
           <CardContent className="pt-6">
             <div className="flex items-center justify-between mb-2">
@@ -212,7 +210,7 @@ export default function ArtistSetupPage() {
             {!completionStats.isComplete && (
               <p className="text-xs text-muted-foreground mt-2 flex items-center gap-1">
                 <AlertCircle className="h-3 w-3" />
-                Required: All basic info, genres, bio, booking price, WhatsApp, and all 3 images.
+                Required: Basic info, African/Global genres, bio, booking price, WhatsApp, and all images.
               </p>
             )}
           </CardContent>
@@ -224,13 +222,12 @@ export default function ArtistSetupPage() {
               <User className="h-8 w-8" />
             </div>
           </div>
-          <h1 className="text-3xl font-bold tracking-tight text-primary font-headline">Artist Profile Setup</h1>
+          <h1 className="text-3xl font-bold tracking-tight text-primary font-headline">Profile Setup</h1>
           <p className="text-muted-foreground text-lg">Tell us more about your craft to start getting gigs.</p>
         </div>
 
         <form onSubmit={handleSubmit}>
           <div className="grid gap-8">
-            {/* Basic Information */}
             <Card className="border-none shadow-md overflow-hidden">
               <CardHeader className="bg-primary/5 border-b">
                 <CardTitle className="flex items-center gap-2 text-xl">
@@ -245,8 +242,8 @@ export default function ArtistSetupPage() {
                   <Input id="fullName" placeholder="Legal name" required value={formData.fullName} onChange={handleInputChange} />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="artistName">Artist Name / Stage Name</Label>
-                  <Input id="artistName" placeholder="Stage name" required value={formData.artistName} onChange={handleInputChange} />
+                  <Label htmlFor="artistName">Artist / Stage Name</Label>
+                  <Input id="artistName" placeholder="e.g. DJ Amapiano Star" required value={formData.artistName} onChange={handleInputChange} />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="dob">Date of Birth</Label>
@@ -259,7 +256,6 @@ export default function ArtistSetupPage() {
               </CardContent>
             </Card>
 
-            {/* Artistic Details */}
             <Card className="border-none shadow-md">
               <CardHeader className="bg-primary/5 border-b">
                 <CardTitle className="flex items-center gap-2 text-xl">
@@ -306,51 +302,49 @@ export default function ArtistSetupPage() {
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="bio">Artist Bio</Label>
+                  <Label htmlFor="bio">Bio / Career Overview</Label>
                   <Textarea id="bio" placeholder="Tell your story..." className="min-h-[120px]" required value={formData.bio} onChange={handleInputChange} />
                 </div>
               </CardContent>
             </Card>
 
-            {/* Content Links */}
             <Card className="border-none shadow-md">
               <CardHeader className="bg-primary/5 border-b">
                 <CardTitle className="flex items-center gap-2 text-xl">
                   <Video className="h-5 w-5 text-primary" />
                   Portfolio Links (Optional)
                 </CardTitle>
-                <CardDescription>Share your best work</CardDescription>
+                <CardDescription>Share your best sets or tracks</CardDescription>
               </CardHeader>
               <CardContent className="grid gap-4 pt-6">
                 <div className="grid md:grid-cols-3 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="songLink1">Song Link 1</Label>
+                    <Label htmlFor="songLink1">Link 1</Label>
                     <Input id="songLink1" placeholder="SoundCloud / Spotify URL" value={formData.songLink1} onChange={handleInputChange} />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="songLink2">Song Link 2</Label>
+                    <Label htmlFor="songLink2">Link 2</Label>
                     <Input id="songLink2" placeholder="SoundCloud / Spotify URL" value={formData.songLink2} onChange={handleInputChange} />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="songLink3">Song Link 3</Label>
+                    <Label htmlFor="songLink3">Link 3</Label>
                     <Input id="songLink3" placeholder="SoundCloud / Spotify URL" value={formData.songLink3} onChange={handleInputChange} />
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="videoLink">Performance Video Link</Label>
+                  <Label htmlFor="videoLink">Performance / Set Video Link</Label>
                   <Input id="videoLink" placeholder="YouTube / Vimeo URL" value={formData.videoLink} onChange={handleInputChange} />
                 </div>
               </CardContent>
             </Card>
 
-            {/* Media Uploads */}
             <Card className="border-none shadow-md">
               <CardHeader className="bg-primary/5 border-b">
                 <CardTitle className="flex items-center gap-2 text-xl">
                   <Upload className="h-5 w-5 text-primary" />
                   Media Uploads (Required)
                 </CardTitle>
-                <CardDescription>Upload necessary documents and photos (Base64 storage)</CardDescription>
+                <CardDescription>Upload identity proof and professional photos</CardDescription>
               </CardHeader>
               <CardContent className="grid md:grid-cols-3 gap-6 pt-6">
                 <div className="space-y-2">

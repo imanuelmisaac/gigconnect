@@ -30,11 +30,9 @@ export default function LoginPage() {
 
     setLoading(true);
     try {
-      // 1. Sign in with Firebase Auth
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
-      // 2. Fetch user profile from Firestore to get the role
       const userDocRef = doc(db, 'users', user.uid);
       const userDocSnap = await getDoc(userDocRef);
 
@@ -47,17 +45,15 @@ export default function LoginPage() {
           description: "Login successful.",
         });
 
-        // 3. Redirect based on role
-        if (role === 'artist') {
+        // Redirect based on role (DJs share the artist dashboard)
+        if (role === 'artist' || role === 'dj') {
           router.push('/artist/dashboard');
         } else if (role === 'gig-maker') {
           router.push('/gig-maker/dashboard');
         } else {
-          // Fallback if role is not recognized or not yet set
           router.push('/');
         }
       } else {
-        // User exists in Auth but not in Firestore (shouldn't happen with standard flow)
         toast({
           variant: "destructive",
           title: "Profile not found",
