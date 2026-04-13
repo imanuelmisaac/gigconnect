@@ -2,6 +2,6 @@
 
 import { initializeFirebase } from '@/firebase';
 
-const { auth, db, storage } = initializeFirebase();
+const { auth, db } = initializeFirebase();
 
-export { auth, db, storage };
+export { auth, db };

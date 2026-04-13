@@ -1,11 +1,9 @@
-
 "use client"
 
 import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { useUser, useFirestore, useStorage } from '@/firebase';
-import { doc, setDoc, serverTimestamp, getDoc } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { useUser, useFirestore } from '@/firebase';
+import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -15,7 +13,6 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Progress } from '@/components/ui/progress';
 import { Briefcase, Upload, Music, Video, User, Check, Loader2, AlertCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 const GENRES = [
   "Pop", "Rock", "Hip Hop", "Jazz", "Classical", 
@@ -25,7 +22,6 @@ const GENRES = [
 export default function ArtistSetupPage() {
   const { user, loading: userLoading } = useUser();
   const db = useFirestore();
-  const storage = useStorage();
   const router = useRouter();
   const { toast } = useToast();
 
@@ -48,9 +44,9 @@ export default function ArtistSetupPage() {
   });
 
   const [files, setFiles] = useState<{
-    idFront: File | null;
-    idBack: File | null;
-    profilePic: File | null;
+    idFront: string | null;
+    idBack: string | null;
+    profilePic: string | null;
   }>({
     idFront: null,
     idBack: null,
@@ -109,16 +105,38 @@ export default function ArtistSetupPage() {
     }));
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, key: keyof typeof files) => {
-    if (e.target.files && e.target.files[0]) {
-      setFiles(prev => ({ ...prev, [key]: e.target.files![0] }));
-    }
+  const fileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = error => reject(error);
+    });
   };
 
-  const uploadFile = async (file: File, path: string) => {
-    const fileRef = ref(storage, path);
-    await uploadBytes(fileRef, file);
-    return await getDownloadURL(fileRef);
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>, key: keyof typeof files) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      // Limit size to ~500KB to prevent Firestore document size limits (max 1MB)
+      if (file.size > 500 * 1024) {
+        toast({
+          variant: "destructive",
+          title: "File too large",
+          description: "Please upload an image smaller than 500KB.",
+        });
+        return;
+      }
+      try {
+        const base64 = await fileToBase64(file);
+        setFiles(prev => ({ ...prev, [key]: base64 }));
+      } catch (err) {
+        toast({
+          variant: "destructive",
+          title: "Error reading file",
+          description: "Could not process the selected image.",
+        });
+      }
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -127,15 +145,6 @@ export default function ArtistSetupPage() {
     setLoading(true);
 
     try {
-      let idFrontUrl = '';
-      let idBackUrl = '';
-      let profilePictureUrl = '';
-
-      // Only upload if new files are selected
-      if (files.idFront) idFrontUrl = await uploadFile(files.idFront, `artists/${user.uid}/id_front`);
-      if (files.idBack) idBackUrl = await uploadFile(files.idBack, `artists/${user.uid}/id_back`);
-      if (files.profilePic) profilePictureUrl = await uploadFile(files.profilePic, `artists/${user.uid}/profile_pic`);
-
       const artistData = {
         userId: user.uid,
         fullName: formData.fullName,
@@ -150,9 +159,9 @@ export default function ArtistSetupPage() {
         whatsappNumber: formData.whatsappNumber,
         songLinks: [formData.songLink1, formData.songLink2, formData.songLink3].filter(link => link),
         videoLink: formData.videoLink,
-        idFrontUrl,
-        idBackUrl,
-        profilePictureUrl,
+        idFrontUrl: files.idFront,
+        idBackUrl: files.idBack,
+        profilePictureUrl: files.profilePic,
         profileComplete: completionStats.isComplete,
         updatedAt: serverTimestamp(),
       };
@@ -341,7 +350,7 @@ export default function ArtistSetupPage() {
                   <Upload className="h-5 w-5 text-primary" />
                   Media Uploads (Required)
                 </CardTitle>
-                <CardDescription>Upload necessary documents and photos</CardDescription>
+                <CardDescription>Upload necessary documents and photos (Base64 storage)</CardDescription>
               </CardHeader>
               <CardContent className="grid md:grid-cols-3 gap-6 pt-6">
                 <div className="space-y-2">
@@ -349,8 +358,8 @@ export default function ArtistSetupPage() {
                   <div className={`flex flex-col items-center justify-center border-2 border-dashed rounded-lg p-6 hover:bg-accent transition-colors ${!files.profilePic ? 'border-destructive/30' : 'border-primary/30'}`}>
                     <Upload className="h-8 w-8 text-muted-foreground mb-2" />
                     <Input type="file" className="hidden" id="profile-pic" accept="image/*" onChange={(e) => handleFileChange(e, 'profilePic')} />
-                    <Label htmlFor="profile-pic" className="cursor-pointer text-sm font-bold text-primary">
-                      {files.profilePic ? files.profilePic.name : 'Choose Image'}
+                    <Label htmlFor="profile-pic" className="cursor-pointer text-sm font-bold text-primary truncate max-w-full px-2">
+                      {files.profilePic ? 'Image Selected' : 'Choose Image'}
                     </Label>
                   </div>
                 </div>
@@ -359,8 +368,8 @@ export default function ArtistSetupPage() {
                   <div className={`flex flex-col items-center justify-center border-2 border-dashed rounded-lg p-6 hover:bg-accent transition-colors ${!files.idFront ? 'border-destructive/30' : 'border-primary/30'}`}>
                     <Upload className="h-8 w-8 text-muted-foreground mb-2" />
                     <Input type="file" className="hidden" id="id-front" accept="image/*" onChange={(e) => handleFileChange(e, 'idFront')} />
-                    <Label htmlFor="id-front" className="cursor-pointer text-sm font-bold text-primary">
-                      {files.idFront ? files.idFront.name : 'Choose File'}
+                    <Label htmlFor="id-front" className="cursor-pointer text-sm font-bold text-primary truncate max-w-full px-2">
+                      {files.idFront ? 'File Selected' : 'Choose File'}
                     </Label>
                   </div>
                 </div>
@@ -369,8 +378,8 @@ export default function ArtistSetupPage() {
                   <div className={`flex flex-col items-center justify-center border-2 border-dashed rounded-lg p-6 hover:bg-accent transition-colors ${!files.idBack ? 'border-destructive/30' : 'border-primary/30'}`}>
                     <Upload className="h-8 w-8 text-muted-foreground mb-2" />
                     <Input type="file" className="hidden" id="id-back" accept="image/*" onChange={(e) => handleFileChange(e, 'idBack')} />
-                    <Label htmlFor="id-back" className="cursor-pointer text-sm font-bold text-primary">
-                      {files.idBack ? files.idBack.name : 'Choose File'}
+                    <Label htmlFor="id-back" className="cursor-pointer text-sm font-bold text-primary truncate max-w-full px-2">
+                      {files.idBack ? 'File Selected' : 'Choose File'}
                     </Label>
                   </div>
                 </div>
