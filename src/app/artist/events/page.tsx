@@ -4,7 +4,7 @@
 import { useMemo, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUser, useFirestore, useCollection, useDoc } from '@/firebase';
-import { collection, query, where, orderBy, doc, setDoc, serverTimestamp, collectionGroup } from 'firebase/firestore';
+import { collection, query, where, orderBy, doc, setDoc, serverTimestamp, getDocs } from 'firebase/firestore';
 import { 
   Loader2, 
   Calendar, 
@@ -16,7 +16,8 @@ import {
   CheckCircle2,
   Clock,
   Video,
-  Send
+  Send,
+  AlertTriangle
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
@@ -63,9 +64,6 @@ export default function ArtistEventsPage() {
 
   const { data: events, loading: eventsLoading } = useCollection(eventsQuery);
 
-  // We check applications via collectionGroup for an overview or specific query if indexed
-  // For the MVP, we'll just check if the user has applied to specific events locally or via a simpler query
-  // Note: collectionGroup requires an index. For simplicity in MVP, we'll assume we check specific paths.
   const [appliedEventIds, setAppliedEventIds] = useState<Set<string>>(new Set());
 
   // Effect to handle dialog opening and auto-filling
@@ -80,49 +78,95 @@ export default function ArtistEventsPage() {
     setIsApplyDialogOpen(true);
   };
 
-  const handleApplySubmit = () => {
+  const handleApplySubmit = async () => {
     if (!user || !db || !selectedEvent || !artistProfile) return;
 
     setSubmitting(true);
-    const applicationId = user.uid; // One application per artist per event
-    const appRef = doc(db, 'events', selectedEvent.eventId, 'applications', applicationId);
 
-    const applicationData = {
-      applicationId,
-      eventId: selectedEvent.eventId,
-      artistId: user.uid,
-      price: Number(proposedPrice),
-      message: message,
-      songLinks: artistProfile.songLinks || [],
-      videoLink: artistProfile.videoLink || '',
-      status: 'pending',
-      createdAt: serverTimestamp(),
-    };
+    try {
+      // 1. Check Deadline
+      const now = new Date();
+      const deadlineDate = new Date(selectedEvent.applicationDeadline);
+      // Set deadline to the end of the day
+      deadlineDate.setHours(23, 59, 59, 999);
 
-    setDoc(appRef, applicationData)
-      .then(() => {
+      if (now > deadlineDate) {
         toast({
-          title: "Application Sent!",
-          description: `You've applied for ${selectedEvent.title}.`,
+          variant: "destructive",
+          title: "Applications closed",
+          description: "The application deadline for this gig has passed.",
         });
         setIsApplyDialogOpen(false);
-        setSelectedEvent(null);
-        setProposedPrice('');
-        setMessage('');
-        // Update local state to reflect application
-        setAppliedEventIds(prev => new Set(prev).add(selectedEvent.eventId));
-      })
-      .catch(async (serverError) => {
-        const permissionError = new FirestorePermissionError({
-          path: appRef.path,
-          operation: 'create',
-          requestResourceData: applicationData,
-        } satisfies SecurityRuleContext);
-        errorEmitter.emit('permission-error', permissionError);
-      })
-      .finally(() => {
         setSubmitting(false);
+        return;
+      }
+
+      // 2. Check Max Applicants
+      const appsRef = collection(db, 'events', selectedEvent.eventId, 'applications');
+      const appsSnap = await getDocs(appsRef);
+      
+      const userHasAlreadyApplied = appsSnap.docs.some(d => d.id === user.uid);
+      
+      // If user hasn't applied yet, check if there is space
+      if (!userHasAlreadyApplied && appsSnap.size >= (selectedEvent.maxApplicants || Infinity)) {
+        toast({
+          variant: "destructive",
+          title: "Applications closed",
+          description: "This event has reached the maximum number of applicants allowed.",
+        });
+        setIsApplyDialogOpen(false);
+        setSubmitting(false);
+        return;
+      }
+
+      // 3. Proceed with saving application
+      const applicationId = user.uid;
+      const appRef = doc(db, 'events', selectedEvent.eventId, 'applications', applicationId);
+
+      const applicationData = {
+        applicationId,
+        eventId: selectedEvent.eventId,
+        artistId: user.uid,
+        price: Number(proposedPrice),
+        message: message,
+        songLinks: artistProfile.songLinks || [],
+        videoLink: artistProfile.videoLink || '',
+        status: 'pending',
+        createdAt: serverTimestamp(),
+      };
+
+      setDoc(appRef, applicationData)
+        .then(() => {
+          toast({
+            title: "Application Sent!",
+            description: `You've applied for ${selectedEvent.title}.`,
+          });
+          setIsApplyDialogOpen(false);
+          setSelectedEvent(null);
+          setProposedPrice('');
+          setMessage('');
+          setAppliedEventIds(prev => new Set(prev).add(selectedEvent.eventId));
+        })
+        .catch(async (serverError) => {
+          const permissionError = new FirestorePermissionError({
+            path: appRef.path,
+            operation: 'create',
+            requestResourceData: applicationData,
+          } satisfies SecurityRuleContext);
+          errorEmitter.emit('permission-error', permissionError);
+        })
+        .finally(() => {
+          setSubmitting(false);
+        });
+
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Submission Error",
+        description: "An error occurred while validating your application.",
       });
+      setSubmitting(false);
+    }
   };
 
   if (userLoading || eventsLoading) {
@@ -151,10 +195,13 @@ export default function ArtistEventsPage() {
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             {events.map((event: any) => {
               const isApplied = appliedEventIds.has(event.eventId);
+              const deadline = new Date(event.applicationDeadline);
+              deadline.setHours(23, 59, 59, 999);
+              const isExpired = new Date() > deadline;
               
               return (
-                <Card key={event.id} className="border-none shadow-md hover:shadow-lg transition-shadow overflow-hidden flex flex-col">
-                  <div className="h-3 bg-primary" />
+                <Card key={event.id} className={`border-none shadow-md hover:shadow-lg transition-all overflow-hidden flex flex-col ${isExpired ? 'opacity-75 grayscale-[0.5]' : ''}`}>
+                  <div className={`h-3 ${isExpired ? 'bg-muted' : 'bg-primary'}`} />
                   <CardHeader>
                     <div className="flex justify-between items-start mb-2">
                       <Badge variant="secondary" className="bg-accent/10 text-accent border-none font-bold">
@@ -163,6 +210,11 @@ export default function ArtistEventsPage() {
                       {isApplied && (
                         <Badge className="bg-green-500 text-white border-none gap-1">
                           <CheckCircle2 className="h-3 w-3" /> Applied
+                        </Badge>
+                      )}
+                      {!isApplied && isExpired && (
+                        <Badge variant="destructive" className="gap-1">
+                          <AlertTriangle className="h-3 w-3" /> Deadline Passed
                         </Badge>
                       )}
                     </div>
@@ -200,7 +252,7 @@ export default function ArtistEventsPage() {
                       </div>
                     </div>
 
-                    <div className="pt-2 flex items-center gap-2 text-[11px] text-muted-foreground">
+                    <div className={`pt-2 flex items-center gap-2 text-[11px] ${isExpired ? 'text-destructive font-bold' : 'text-muted-foreground'}`}>
                       <Clock className="h-3 w-3" />
                       <span>Deadline: {event.applicationDeadline}</span>
                     </div>
@@ -208,12 +260,14 @@ export default function ArtistEventsPage() {
                   <CardFooter className="bg-muted/30 pt-4">
                     <Button 
                       className="w-full font-bold gap-2" 
-                      variant={isApplied ? "secondary" : "default"}
-                      disabled={isApplied}
+                      variant={isApplied ? "secondary" : isExpired ? "outline" : "default"}
+                      disabled={isApplied || isExpired}
                       onClick={() => handleOpenApply(event)}
                     >
                       {isApplied ? (
                         <>Applied Successfully</>
+                      ) : isExpired ? (
+                        <>Closed</>
                       ) : (
                         <>
                           Apply for Gig
