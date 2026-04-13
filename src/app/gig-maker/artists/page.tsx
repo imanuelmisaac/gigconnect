@@ -1,7 +1,7 @@
 
 "use client"
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useFirestore, useCollection } from '@/firebase';
 import { collection, query } from 'firebase/firestore';
 import { 
@@ -11,7 +11,8 @@ import {
   Music, 
   ArrowLeft,
   Filter,
-  Users
+  Users,
+  AlertCircle
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
@@ -23,41 +24,46 @@ import { Slider } from '@/components/ui/slider';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import Link from 'next/link';
 import { WhatsAppButton } from '@/components/whatsapp-button';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 const GENRES = [
   "All Genres", "Pop", "Rock", "Hip Hop", "Jazz", "Classical", 
   "Electronic", "R&B", "Country", "Reggae", "Folk"
 ];
 
+// Increased max price range to accommodate high-value bookings
+const MAX_PRICE_LIMIT = 20000;
+
 export default function BrowseArtistsPage() {
   const db = useFirestore();
   
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedGenre, setSelectedGenre] = useState('All Genres');
-  const [maxPrice, setMaxPrice] = useState(5000);
+  const [maxPrice, setMaxPrice] = useState(MAX_PRICE_LIMIT);
 
   const artistsQuery = useMemo(() => {
     if (!db) return null;
-    // Fetch all artists and filter in memory for better reliability
     return query(collection(db, 'artists'));
   }, [db]);
 
-  const { data: artists, loading } = useCollection(artistsQuery);
+  const { data: artists, loading, error } = useCollection(artistsQuery);
 
   const filteredArtists = useMemo(() => {
     if (!artists) return [];
     
     return artists.filter((artist: any) => {
-      // Basic profile requirement check
-      if (!artist.artistName) return false;
+      // Basic profile requirement check - ensure we at least have a name
+      if (!artist.artistName && !artist.fullName) return false;
 
-      const matchesSearch = (artist.artistName || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          (artist.fullName || '').toLowerCase().includes(searchQuery.toLowerCase());
+      const artistName = (artist.artistName || artist.fullName || '').toLowerCase();
+      const matchesSearch = artistName.includes(searchQuery.toLowerCase());
       
       const matchesGenre = selectedGenre === 'All Genres' || 
-                          (artist.genres && artist.genres.includes(selectedGenre));
+                          (artist.genres && Array.isArray(artist.genres) && artist.genres.includes(selectedGenre));
       
-      const matchesPrice = (artist.bookingPrice || 0) <= maxPrice;
+      // Handle numeric comparison safely
+      const price = Number(artist.bookingPrice) || 0;
+      const matchesPrice = price <= maxPrice;
       
       return matchesSearch && matchesGenre && matchesPrice;
     });
@@ -66,7 +72,10 @@ export default function BrowseArtistsPage() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-secondary/10">
-        <Loader2 className="h-10 w-10 animate-spin text-primary" />
+        <div className="text-center space-y-4">
+          <Loader2 className="h-10 w-10 animate-spin text-primary mx-auto" />
+          <p className="text-muted-foreground">Fetching talent pool...</p>
+        </div>
       </div>
     );
   }
@@ -81,14 +90,24 @@ export default function BrowseArtistsPage() {
           </Link>
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             <div>
-              <h1 className="text-4xl font-bold text-primary font-headline">Browse Artists</h1>
+              <h1 className="text-4xl font-bold text-primary font-headline text-balance">Browse Artists</h1>
               <p className="text-muted-foreground">Find the perfect talent for your next event.</p>
             </div>
-            <Badge variant="outline" className="px-4 py-1 text-sm bg-white font-bold">
-              {filteredArtists.length} Artists Found
+            <Badge variant="outline" className="px-4 py-1 text-sm bg-white font-bold border-primary/20">
+              {filteredArtists.length} Artists Available
             </Badge>
           </div>
         </header>
+
+        {error && (
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Error</AlertTitle>
+            <AlertDescription>
+              Failed to load artists. Please check your internet connection and try again.
+            </AlertDescription>
+          </Alert>
+        )}
 
         <div className="grid lg:grid-cols-4 gap-8">
           {/* Filters Sidebar */}
@@ -108,7 +127,7 @@ export default function BrowseArtistsPage() {
                     <Input 
                       id="search" 
                       placeholder="Artist or stage name..." 
-                      className="pl-10"
+                      className="pl-10 h-11"
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                     />
@@ -118,7 +137,7 @@ export default function BrowseArtistsPage() {
                 <div className="space-y-2">
                   <Label>Genre</Label>
                   <Select onValueChange={setSelectedGenre} defaultValue={selectedGenre}>
-                    <SelectTrigger>
+                    <SelectTrigger className="h-11">
                       <SelectValue placeholder="Select genre" />
                     </SelectTrigger>
                     <SelectContent>
@@ -130,30 +149,31 @@ export default function BrowseArtistsPage() {
                 </div>
 
                 <div className="space-y-4">
-                  <div className="flex justify-between">
-                    <Label>Max Budget ($)</Label>
-                    <span className="text-xs font-bold text-primary">${maxPrice}</span>
+                  <div className="flex justify-between items-center">
+                    <Label>Max Budget</Label>
+                    <Badge variant="secondary" className="font-bold text-primary">${maxPrice.toLocaleString()}</Badge>
                   </div>
                   <Slider 
-                    defaultValue={[maxPrice]} 
-                    max={5000} 
-                    step={50}
+                    value={[maxPrice]} 
+                    max={MAX_PRICE_LIMIT} 
+                    min={0}
+                    step={100}
                     onValueChange={(vals) => setMaxPrice(vals[0])}
                   />
-                  <p className="text-[10px] text-muted-foreground text-center">Adjust to match your event budget</p>
+                  <p className="text-[10px] text-muted-foreground text-center">Slide to adjust your booking budget</p>
                 </div>
               </CardContent>
-              <CardFooter className="pt-0">
+              <CardFooter className="pt-0 border-t mt-4">
                 <Button 
                   variant="ghost" 
-                  className="w-full text-xs text-muted-foreground"
+                  className="w-full text-xs text-muted-foreground mt-4"
                   onClick={() => {
                     setSearchQuery('');
                     setSelectedGenre('All Genres');
-                    setMaxPrice(5000);
+                    setMaxPrice(MAX_PRICE_LIMIT);
                   }}
                 >
-                  Reset All Filters
+                  Clear All Filters
                 </Button>
               </CardFooter>
             </Card>
@@ -164,19 +184,19 @@ export default function BrowseArtistsPage() {
             {filteredArtists.length > 0 ? (
               <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-6">
                 {filteredArtists.map((artist: any) => (
-                  <Card key={artist.id} className="border-none shadow-sm hover:shadow-md transition-all overflow-hidden flex flex-col group">
+                  <Card key={artist.id} className="border-none shadow-sm hover:shadow-md transition-all overflow-hidden flex flex-col group slide-up">
                     <div className="h-20 bg-gradient-to-br from-primary/80 to-accent/80" />
                     <CardHeader className="relative pt-0 flex flex-col items-center">
                       <div className="flex justify-center -mt-10 mb-3">
                         <Avatar className="h-20 w-20 border-4 border-white shadow-md">
                           <AvatarImage src={artist.profilePictureUrl} />
                           <AvatarFallback className="bg-secondary text-primary font-bold text-xl">
-                            {artist.artistName?.substring(0, 2).toUpperCase() || 'AR'}
+                            {(artist.artistName || artist.fullName || 'AR').substring(0, 2).toUpperCase()}
                           </AvatarFallback>
                         </Avatar>
                       </div>
-                      <CardTitle className="text-xl font-headline text-center group-hover:text-primary transition-colors">
-                        {artist.artistName}
+                      <CardTitle className="text-xl font-headline text-center group-hover:text-primary transition-colors line-clamp-1">
+                        {artist.artistName || artist.fullName}
                       </CardTitle>
                       <div className="flex items-center text-xs text-muted-foreground gap-1 mt-1">
                         <MapPin className="h-3 w-3" />
@@ -184,34 +204,38 @@ export default function BrowseArtistsPage() {
                       </div>
                     </CardHeader>
                     <CardContent className="flex-1 space-y-4 text-center">
-                      <div className="flex flex-wrap justify-center gap-1.5">
-                        {artist.genres?.map((genre: string) => (
-                          <Badge key={genre} variant="secondary" className="text-[10px] py-0">
-                            {genre}
-                          </Badge>
-                        )) || <span className="text-xs text-muted-foreground italic">No genres listed</span>}
+                      <div className="flex flex-wrap justify-center gap-1.5 min-h-[24px]">
+                        {artist.genres && Array.isArray(artist.genres) && artist.genres.length > 0 ? (
+                          artist.genres.map((genre: string) => (
+                            <Badge key={genre} variant="secondary" className="text-[10px] py-0 px-2">
+                              {genre}
+                            </Badge>
+                          ))
+                        ) : (
+                          <span className="text-[10px] text-muted-foreground italic">No genres listed</span>
+                        )}
                       </div>
                       
-                      <p className="text-sm text-muted-foreground line-clamp-2 italic px-2">
+                      <p className="text-sm text-muted-foreground line-clamp-3 italic px-2 min-h-[60px]">
                         "{artist.bio || 'Professional artist ready for booking.'}"
                       </p>
 
-                      <div className="flex items-center justify-center gap-4 pt-2">
+                      <div className="flex items-center justify-center gap-4 pt-2 border-t">
                         <div className="text-center">
                           <p className="text-[10px] uppercase font-bold text-muted-foreground tracking-tighter">Booking</p>
-                          <p className="font-bold text-green-600">${artist.bookingPrice || 0}</p>
+                          <p className="font-bold text-green-600">${Number(artist.bookingPrice || 0).toLocaleString()}</p>
                         </div>
                         <div className="h-8 w-px bg-border" />
                         <div className="text-center">
                           <p className="text-[10px] uppercase font-bold text-muted-foreground tracking-tighter">Features</p>
-                          <p className="font-bold text-primary">${artist.featurePrice || 'N/A'}</p>
+                          <p className="font-bold text-primary">${artist.featurePrice ? Number(artist.featurePrice).toLocaleString() : 'N/A'}</p>
                         </div>
                       </div>
                     </CardContent>
                     <CardFooter className="bg-muted/30 pt-4 gap-2">
                       <WhatsAppButton 
                         phoneNumber={artist.whatsappNumber || ''}
-                        message={`Hi ${artist.artistName}, I saw your profile on GigConnect and I'm interested in booking you for an upcoming event.`}
+                        message={`Hi ${artist.artistName || artist.fullName}, I saw your profile on GigConnect and I'm interested in booking you for an upcoming event.`}
                         className="flex-1 bg-green-600 hover:bg-green-700 text-white border-none font-bold"
                         disabled={!artist.whatsappNumber}
                       >
@@ -228,13 +252,13 @@ export default function BrowseArtistsPage() {
                     <Users className="h-12 w-12 text-primary/20" />
                   </div>
                   <div>
-                    <h2 className="text-xl font-bold">No artists match your search</h2>
-                    <p className="text-muted-foreground">Try adjusting your filters or checking back later.</p>
+                    <h2 className="text-xl font-bold">No artists match your criteria</h2>
+                    <p className="text-muted-foreground max-w-xs mx-auto">Try adjusting your filters or expanding your budget range.</p>
                   </div>
-                  <Button variant="link" onClick={() => {
+                  <Button variant="outline" className="mt-4" onClick={() => {
                     setSearchQuery('');
                     setSelectedGenre('All Genres');
-                    setMaxPrice(5000);
+                    setMaxPrice(MAX_PRICE_LIMIT);
                   }}>
                     Clear all filters
                   </Button>
