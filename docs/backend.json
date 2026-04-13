@@ -1,9 +1,51 @@
+
 {
-  "entities": {},
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "Information about a registered user",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "The unique Firebase Auth UID"
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "User's email address"
+        },
+        "role": {
+          "type": "string",
+          "enum": [
+            "artist",
+            "gig-maker"
+          ],
+          "description": "The professional role of the user"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp when the account was created"
+        }
+      },
+      "required": [
+        "userId",
+        "email",
+        "role",
+        "createdAt"
+      ]
+    }
+  },
   "auth": {
     "providers": [
       "password"
     ]
   },
-  "firestore": {}
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profile documents stored by Auth UID"
+    }
+  }
 }
