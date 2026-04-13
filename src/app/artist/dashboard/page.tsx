@@ -306,7 +306,7 @@ export default function ArtistDashboardPage() {
                   </div>
                 ) : applications && applications.length > 0 ? (
                   applications.slice(0, 5).map((app: any) => (
-                    <Card key={app.id} className="border-none shadow-sm hover:shadow-md transition-shadow">
+                    <Card key={`${app.eventId}-${app.id}`} className="border-none shadow-sm hover:shadow-md transition-shadow">
                       <CardContent className="p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                         <div className="flex items-center gap-4">
                           <div className="h-10 w-10 rounded-lg bg-secondary flex items-center justify-center text-primary font-bold">
