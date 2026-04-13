@@ -147,6 +147,69 @@
         "location",
         "whatsappNumber"
       ]
+    },
+    "Event": {
+      "title": "Event",
+      "description": "A musical event created by a Gig Maker",
+      "type": "object",
+      "properties": {
+        "eventId": {
+          "type": "string"
+        },
+        "gigMakerId": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "date": {
+          "type": "string",
+          "format": "date"
+        },
+        "location": {
+          "type": "string"
+        },
+        "budget": {
+          "type": "number"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["Open", "Closed", "Completed"]
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["eventId", "gigMakerId", "title", "date", "status"]
+    },
+    "Application": {
+      "title": "Application",
+      "description": "An artist's application for an event",
+      "type": "object",
+      "properties": {
+        "applicationId": {
+          "type": "string"
+        },
+        "eventId": {
+          "type": "string"
+        },
+        "artistId": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["Pending", "Reviewed", "Accepted", "Rejected"]
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["applicationId", "eventId", "artistId", "status"]
     }
   },
   "auth": {
@@ -166,6 +229,14 @@
     "/gig-makers/{userId}": {
       "schema": "GigMaker",
       "description": "Gig maker business profile data"
+    },
+    "/events/{eventId}": {
+      "schema": "Event",
+      "description": "Musical event listings"
+    },
+    "/applications/{applicationId}": {
+      "schema": "Application",
+      "description": "Applications from artists to events"
     }
   }
 }
