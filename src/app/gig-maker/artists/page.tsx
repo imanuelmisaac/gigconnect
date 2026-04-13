@@ -1,4 +1,3 @@
-
 "use client"
 
 import { useState, useMemo, useEffect } from 'react';
@@ -21,7 +20,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Slider } from '@/components/ui/slider';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/avatar';
 import Link from 'next/link';
 import { WhatsAppButton } from '@/components/whatsapp-button';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -31,8 +30,8 @@ const GENRES = [
   "Electronic", "R&B", "Country", "Reggae", "Folk"
 ];
 
-// Increased max price range to accommodate high-value bookings
-const MAX_PRICE_LIMIT = 20000;
+// Increased max price range to 10,000,000 Pula as requested
+const MAX_PRICE_LIMIT = 10000000;
 
 export default function BrowseArtistsPage() {
   const db = useFirestore();
@@ -151,13 +150,13 @@ export default function BrowseArtistsPage() {
                 <div className="space-y-4">
                   <div className="flex justify-between items-center">
                     <Label>Max Budget</Label>
-                    <Badge variant="secondary" className="font-bold text-primary">${maxPrice.toLocaleString()}</Badge>
+                    <Badge variant="secondary" className="font-bold text-primary">P{maxPrice.toLocaleString()}</Badge>
                   </div>
                   <Slider 
                     value={[maxPrice]} 
                     max={MAX_PRICE_LIMIT} 
                     min={0}
-                    step={100}
+                    step={1000}
                     onValueChange={(vals) => setMaxPrice(vals[0])}
                   />
                   <p className="text-[10px] text-muted-foreground text-center">Slide to adjust your booking budget</p>
@@ -223,12 +222,12 @@ export default function BrowseArtistsPage() {
                       <div className="flex items-center justify-center gap-4 pt-2 border-t">
                         <div className="text-center">
                           <p className="text-[10px] uppercase font-bold text-muted-foreground tracking-tighter">Booking</p>
-                          <p className="font-bold text-green-600">${Number(artist.bookingPrice || 0).toLocaleString()}</p>
+                          <p className="font-bold text-green-600">P{Number(artist.bookingPrice || 0).toLocaleString()}</p>
                         </div>
                         <div className="h-8 w-px bg-border" />
                         <div className="text-center">
                           <p className="text-[10px] uppercase font-bold text-muted-foreground tracking-tighter">Features</p>
-                          <p className="font-bold text-primary">${artist.featurePrice ? Number(artist.featurePrice).toLocaleString() : 'N/A'}</p>
+                          <p className="font-bold text-primary">{artist.featurePrice ? `P${Number(artist.featurePrice).toLocaleString()}` : 'N/A'}</p>
                         </div>
                       </div>
                     </CardContent>

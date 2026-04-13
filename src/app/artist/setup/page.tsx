@@ -290,18 +290,18 @@ export default function ArtistSetupPage() {
                 <div className="grid md:grid-cols-2 gap-6">
                   <div className="space-y-2">
                     <Label htmlFor="location">Location (City, Country)</Label>
-                    <Input id="location" placeholder="e.g. Nairobi, Kenya" required value={formData.location} onChange={handleInputChange} />
+                    <Input id="location" placeholder="e.g. Gaborone, Botswana" required value={formData.location} onChange={handleInputChange} />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="whatsappNumber">WhatsApp Number</Label>
-                    <Input id="whatsappNumber" placeholder="+254..." required value={formData.whatsappNumber} onChange={handleInputChange} />
+                    <Input id="whatsappNumber" placeholder="+267..." required value={formData.whatsappNumber} onChange={handleInputChange} />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="bookingPrice">Booking Price ($)</Label>
+                    <Label htmlFor="bookingPrice">Booking Price (P)</Label>
                     <Input id="bookingPrice" type="number" placeholder="0.00" required value={formData.bookingPrice} onChange={handleInputChange} />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="featurePrice">Feature Price (Optional, $)</Label>
+                    <Label htmlFor="featurePrice">Feature Price (Optional, P)</Label>
                     <Input id="featurePrice" type="number" placeholder="0.00" value={formData.featurePrice} onChange={handleInputChange} />
                   </div>
                 </div>

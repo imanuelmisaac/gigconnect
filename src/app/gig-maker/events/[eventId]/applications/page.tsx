@@ -13,13 +13,12 @@ import {
   ExternalLink,
   Calendar,
   MapPin,
-  DollarSign,
   Video
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback } from '@/avatar';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
 import { errorEmitter } from '@/firebase/error-emitter';
@@ -94,7 +93,7 @@ export default function GigMakerApplicationsPage() {
               <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
                 <span className="flex items-center gap-1"><Calendar className="h-4 w-4" /> {event?.date}</span>
                 <span className="flex items-center gap-1"><MapPin className="h-4 w-4" /> {event?.location}</span>
-                <span className="flex items-center gap-1 text-green-600 font-bold"><DollarSign className="h-4 w-4" /> ${event?.minPrice} - ${event?.maxPrice}</span>
+                <span className="flex items-center gap-1 text-green-600 font-bold">P{event?.minPrice} - P{event?.maxPrice}</span>
               </div>
             </div>
             <div className="text-right">
@@ -125,7 +124,7 @@ export default function GigMakerApplicationsPage() {
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className="text-sm font-bold text-green-600">${app.price}</p>
+                    <p className="text-sm font-bold text-green-600">P{app.price}</p>
                     <Badge className={`mt-1 ${
                       app.status === 'Accepted' ? 'bg-green-500' : 
                       app.status === 'Rejected' ? 'bg-red-500' : 'bg-orange-500'

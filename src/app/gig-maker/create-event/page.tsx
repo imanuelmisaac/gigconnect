@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -12,7 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Calendar as CalendarIcon, MapPin, DollarSign, Users, Briefcase, Loader2, ArrowLeft } from 'lucide-react';
+import { Calendar as CalendarIcon, MapPin, Users, Briefcase, Loader2, ArrowLeft } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
 
@@ -150,7 +149,7 @@ export default function CreateEventPage() {
               <CardContent className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="title">Event Name</Label>
-                  <Input id="title" placeholder="e.g. Saturday Night Jazz Live" required value={formData.title} onChange={handleInputChange} />
+                  <Input id="title" placeholder="e.g. Gabs Live Festival" required value={formData.title} onChange={handleInputChange} />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="description">Description</Label>
@@ -213,17 +212,17 @@ export default function CreateEventPage() {
 
                 <div className="grid md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="minPrice">Minimum Budget ($)</Label>
+                    <Label htmlFor="minPrice">Minimum Budget (P)</Label>
                     <div className="relative">
-                      <DollarSign className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                      <Input id="minPrice" type="number" placeholder="0.00" className="pl-10" required value={formData.minPrice} onChange={handleInputChange} />
+                      <span className="absolute left-3 top-2.5 text-muted-foreground font-bold">P</span>
+                      <Input id="minPrice" type="number" placeholder="0.00" className="pl-8" required value={formData.minPrice} onChange={handleInputChange} />
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="maxPrice">Maximum Budget ($)</Label>
+                    <Label htmlFor="maxPrice">Maximum Budget (P)</Label>
                     <div className="relative">
-                      <DollarSign className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                      <Input id="maxPrice" type="number" placeholder="0.00" className="pl-10" required value={formData.maxPrice} onChange={handleInputChange} />
+                      <span className="absolute left-3 top-2.5 text-muted-foreground font-bold">P</span>
+                      <Input id="maxPrice" type="number" placeholder="0.00" className="pl-8" required value={formData.maxPrice} onChange={handleInputChange} />
                     </div>
                   </div>
                 </div>

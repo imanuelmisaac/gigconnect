@@ -20,7 +20,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/avatar';
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
 import { WhatsAppButton } from '@/components/whatsapp-button';
@@ -180,11 +180,11 @@ export default function ArtistDashboardPage() {
                 <div className="pt-4 border-t flex justify-between items-center">
                   <div className="text-center px-2">
                     <p className="text-xs text-muted-foreground">Booking</p>
-                    <p className="font-bold text-primary">${artistProfile?.bookingPrice || 0}</p>
+                    <p className="font-bold text-primary">P{artistProfile?.bookingPrice || 0}</p>
                   </div>
                   <div className="text-center px-2 border-l border-r">
                     <p className="text-xs text-muted-foreground">Features</p>
-                    <p className="font-bold text-primary">${artistProfile?.featurePrice || 'N/A'}</p>
+                    <p className="font-bold text-primary">{artistProfile?.featurePrice ? `P${artistProfile.featurePrice}` : 'N/A'}</p>
                   </div>
                   <div className="text-center px-2">
                     <p className="text-xs text-muted-foreground">Rating</p>

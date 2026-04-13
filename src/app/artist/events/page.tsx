@@ -8,7 +8,6 @@ import {
   Loader2, 
   Calendar, 
   MapPin, 
-  DollarSign, 
   Briefcase, 
   ArrowLeft,
   Music,
@@ -97,7 +96,6 @@ export default function ArtistEventsPage() {
       }
 
       // 2. Check if user already applied by attempting to get their specific document
-      // This is compatible with Security Rules that restrict list access
       const appRef = doc(db, 'events', selectedEvent.eventId, 'applications', user.uid);
       const appSnap = await getDoc(appRef);
       
@@ -226,9 +224,8 @@ export default function ArtistEventsPage() {
                         <span className="truncate">{event.location}</span>
                       </div>
                       <div className="flex items-center gap-2 text-muted-foreground col-span-2">
-                        <DollarSign className="h-4 w-4 text-green-600" />
                         <span className="font-bold text-foreground">
-                          ${event.minPrice} - ${event.maxPrice}
+                          P{event.minPrice} - P{event.maxPrice}
                         </span>
                       </div>
                     </div>
@@ -301,19 +298,19 @@ export default function ArtistEventsPage() {
 
           <div className="space-y-6 py-4">
             <div className="space-y-2">
-              <Label htmlFor="proposedPrice">Proposed Price ($)</Label>
+              <Label htmlFor="proposedPrice">Proposed Price (P)</Label>
               <div className="relative">
-                <DollarSign className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                <span className="absolute left-3 top-2.5 text-muted-foreground font-bold">P</span>
                 <Input 
                   id="proposedPrice" 
                   type="number" 
                   placeholder="0.00" 
-                  className="pl-10"
+                  className="pl-8"
                   value={proposedPrice}
                   onChange={(e) => setProposedPrice(e.target.value)}
                 />
               </div>
-              <p className="text-[10px] text-muted-foreground">Budget range: ${selectedEvent?.minPrice} - ${selectedEvent?.maxPrice}</p>
+              <p className="text-[10px] text-muted-foreground">Budget range: P{selectedEvent?.minPrice} - P{selectedEvent?.maxPrice}</p>
             </div>
 
             <div className="space-y-2">
