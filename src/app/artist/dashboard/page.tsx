@@ -3,8 +3,8 @@
 
 import { useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { useUser, useFirestore, useDoc } from '@/firebase';
-import { doc } from 'firebase/firestore';
+import { useUser, useFirestore, useDoc, useCollection } from '@/firebase';
+import { doc, collection, query, where, orderBy } from 'firebase/firestore';
 import { 
   Loader2, 
   LayoutDashboard, 
@@ -24,6 +24,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
+import Link from 'next/link';
 
 export default function ArtistDashboardPage() {
   const { user, loading: userLoading } = useUser();
@@ -37,6 +38,17 @@ export default function ArtistDashboardPage() {
 
   const { data: artistProfile, loading: profileLoading } = useDoc(artistDocRef);
 
+  const applicationsQuery = useMemo(() => {
+    if (!db || !user) return null;
+    return query(
+      collection(db, 'applications'),
+      where('artistId', '==', user.uid),
+      orderBy('createdAt', 'desc')
+    );
+  }, [db, user]);
+
+  const { data: applications, loading: appsLoading } = useCollection(applicationsQuery);
+
   useEffect(() => {
     if (!userLoading && !user) {
       router.push('/login');
@@ -45,9 +57,8 @@ export default function ArtistDashboardPage() {
 
     if (!profileLoading && artistProfile) {
       if (artistProfile.profileComplete === false) {
-        // We let them stay if they want to view the partial dashboard, 
-        // but typically setup should be finished. 
-        // For this requirement, we'll just show the status.
+        // Redirection logic for incomplete profile
+        router.push('/artist/setup');
       }
     }
   }, [user, userLoading, artistProfile, profileLoading, router]);
@@ -78,17 +89,19 @@ export default function ArtistDashboardPage() {
             <LayoutDashboard className="mr-2 h-4 w-4" />
             Dashboard
           </Button>
-          <Button variant="ghost" className="w-full justify-start text-white hover:bg-white/10">
-            <Calendar className="mr-2 h-4 w-4" />
-            My Gigs
-          </Button>
+          <Link href="/artist/events">
+            <Button variant="ghost" className="w-full justify-start text-white hover:bg-white/10">
+              <Calendar className="mr-2 h-4 w-4" />
+              Available Gigs
+            </Button>
+          </Link>
           <Button variant="ghost" className="w-full justify-start text-white hover:bg-white/10" onClick={() => router.push('/artist/setup')}>
             <Settings className="mr-2 h-4 w-4" />
             Profile Settings
           </Button>
         </nav>
         <div className="p-4 border-t border-white/10">
-           <Button variant="ghost" className="w-full justify-start text-white hover:bg-white/10">
+           <Button variant="ghost" className="w-full justify-start text-white hover:bg-white/10" onClick={() => router.push('/login')}>
             <LogOut className="mr-2 h-4 w-4" />
             Logout
           </Button>
@@ -202,10 +215,12 @@ export default function ArtistDashboardPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <Button size="lg" className="bg-accent hover:bg-accent/90 text-white font-bold gap-2">
-                  <Search className="h-5 w-5" />
-                  Browse Events
-                </Button>
+                <Link href="/artist/events">
+                  <Button size="lg" className="bg-accent hover:bg-accent/90 text-white font-bold gap-2">
+                    <Search className="h-5 w-5" />
+                    Browse Events
+                  </Button>
+                </Link>
               </CardContent>
             </Card>
 
@@ -216,42 +231,45 @@ export default function ArtistDashboardPage() {
                   <Briefcase className="h-5 w-5 text-accent" />
                   My Applications
                 </h3>
-                <Button variant="link" className="text-accent font-bold">View all</Button>
               </div>
               
               <div className="grid gap-4">
-                {/* Mock Applications List */}
-                {[
-                  { id: 1, event: 'Summer Jazz Festival', status: 'Pending', date: 'Aug 15' },
-                  { id: 2, event: 'Tech Conference Afterparty', status: 'Under Review', date: 'Sep 2' },
-                ].map((app) => (
-                  <Card key={app.id} className="border-none shadow-sm hover:shadow-md transition-shadow">
-                    <CardContent className="p-4 flex items-center justify-between">
-                      <div className="flex items-center gap-4">
-                        <div className="h-12 w-12 rounded-lg bg-secondary flex items-center justify-center">
-                          <Music className="h-6 w-6 text-primary" />
+                {appsLoading ? (
+                  <div className="h-24 flex items-center justify-center">
+                    <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                  </div>
+                ) : applications && applications.length > 0 ? (
+                  applications.map((app: any) => (
+                    <Card key={app.id} className="border-none shadow-sm hover:shadow-md transition-shadow">
+                      <CardContent className="p-4 flex items-center justify-between">
+                        <div className="flex items-center gap-4">
+                          <div className="h-12 w-12 rounded-lg bg-secondary flex items-center justify-center">
+                            <Music className="h-6 w-6 text-primary" />
+                          </div>
+                          <div>
+                            <h4 className="font-bold text-sm">Application for Event</h4>
+                            <p className="text-xs text-muted-foreground">Ref: {app.eventId}</p>
+                          </div>
                         </div>
-                        <div>
-                          <h4 className="font-bold text-sm">{app.event}</h4>
-                          <p className="text-xs text-muted-foreground">{app.date}</p>
+                        <div className="text-right">
+                          <Badge variant="outline" className="mb-1">{app.status}</Badge>
+                          <p className="text-[10px] text-muted-foreground flex items-center gap-1 justify-end">
+                            Details <ExternalLink className="h-2 w-2" />
+                          </p>
                         </div>
-                      </div>
-                      <div className="text-right">
-                        <Badge variant="outline" className="mb-1">{app.status}</Badge>
-                        <p className="text-[10px] text-muted-foreground flex items-center gap-1 justify-end">
-                          Details <ExternalLink className="h-2 w-2" />
-                        </p>
-                      </div>
+                      </CardContent>
+                    </Card>
+                  ))
+                ) : (
+                  <Card className="border-dashed border-2 bg-transparent">
+                    <CardContent className="p-8 text-center text-muted-foreground">
+                      <p>You haven't applied for any gigs yet.</p>
+                      <Link href="/artist/events">
+                        <Button variant="link" className="text-accent font-bold">Find gigs now</Button>
+                      </Link>
                     </CardContent>
                   </Card>
-                ))}
-                
-                {/* Empty State if needed */}
-                <Card className="border-dashed border-2 bg-transparent">
-                  <CardContent className="p-8 text-center text-muted-foreground">
-                    <p>No other active applications.</p>
-                  </CardContent>
-                </Card>
+                )}
               </div>
             </section>
           </div>
