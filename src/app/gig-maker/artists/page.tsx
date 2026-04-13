@@ -3,13 +3,12 @@
 
 import { useState, useMemo } from 'react';
 import { useFirestore, useCollection } from '@/firebase';
-import { collection, query, where } from 'firebase/firestore';
+import { collection, query } from 'firebase/firestore';
 import { 
   Loader2, 
   Search, 
   MapPin, 
   Music, 
-  DollarSign, 
   ArrowLeft,
   Filter,
   Users
@@ -39,8 +38,8 @@ export default function BrowseArtistsPage() {
 
   const artistsQuery = useMemo(() => {
     if (!db) return null;
-    // We only show artists who have completed their profile
-    return query(collection(db, 'artists'), where('profileComplete', '==', true));
+    // Fetch all artists and filter in memory for better reliability
+    return query(collection(db, 'artists'));
   }, [db]);
 
   const { data: artists, loading } = useCollection(artistsQuery);
@@ -49,6 +48,9 @@ export default function BrowseArtistsPage() {
     if (!artists) return [];
     
     return artists.filter((artist: any) => {
+      // Basic profile requirement check
+      if (!artist.artistName) return false;
+
       const matchesSearch = (artist.artistName || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
                           (artist.fullName || '').toLowerCase().includes(searchQuery.toLowerCase());
       
@@ -178,7 +180,7 @@ export default function BrowseArtistsPage() {
                       </CardTitle>
                       <div className="flex items-center text-xs text-muted-foreground gap-1 mt-1">
                         <MapPin className="h-3 w-3" />
-                        {artist.location}
+                        {artist.location || 'Location unknown'}
                       </div>
                     </CardHeader>
                     <CardContent className="flex-1 space-y-4 text-center">
@@ -187,7 +189,7 @@ export default function BrowseArtistsPage() {
                           <Badge key={genre} variant="secondary" className="text-[10px] py-0">
                             {genre}
                           </Badge>
-                        ))}
+                        )) || <span className="text-xs text-muted-foreground italic">No genres listed</span>}
                       </div>
                       
                       <p className="text-sm text-muted-foreground line-clamp-2 italic px-2">
@@ -197,7 +199,7 @@ export default function BrowseArtistsPage() {
                       <div className="flex items-center justify-center gap-4 pt-2">
                         <div className="text-center">
                           <p className="text-[10px] uppercase font-bold text-muted-foreground tracking-tighter">Booking</p>
-                          <p className="font-bold text-green-600">${artist.bookingPrice}</p>
+                          <p className="font-bold text-green-600">${artist.bookingPrice || 0}</p>
                         </div>
                         <div className="h-8 w-px bg-border" />
                         <div className="text-center">
@@ -208,9 +210,10 @@ export default function BrowseArtistsPage() {
                     </CardContent>
                     <CardFooter className="bg-muted/30 pt-4 gap-2">
                       <WhatsAppButton 
-                        phoneNumber={artist.whatsappNumber}
+                        phoneNumber={artist.whatsappNumber || ''}
                         message={`Hi ${artist.artistName}, I saw your profile on GigConnect and I'm interested in booking you for an upcoming event.`}
                         className="flex-1 bg-green-600 hover:bg-green-700 text-white border-none font-bold"
+                        disabled={!artist.whatsappNumber}
                       >
                         Contact
                       </WhatsAppButton>
