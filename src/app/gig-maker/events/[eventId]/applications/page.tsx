@@ -1,7 +1,7 @@
 
 "use client"
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useUser, useFirestore, useCollection, useDoc } from '@/firebase';
 import { doc, collection, query, updateDoc, serverTimestamp } from 'firebase/firestore';
@@ -14,17 +14,24 @@ import {
   ExternalLink,
   Calendar,
   MapPin,
-  Video
+  Video,
+  Search,
+  Filter,
+  Megaphone,
+  Copy,
+  Check
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
 import { WhatsAppButton } from '@/components/whatsapp-button';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 export default function GigMakerApplicationsPage() {
   const params = useParams();
@@ -33,6 +40,10 @@ export default function GigMakerApplicationsPage() {
   const db = useFirestore();
   const router = useRouter();
   const { toast } = useToast();
+
+  const [searchQuery, setSearchQuery] = useState('');
+  const [activeTab, setActiveTab] = useState('pending');
+  const [copied, setCopied] = useState(false);
 
   const gigMakerProfileRef = useMemo(() => {
     if (!db || !user) return null;
@@ -55,10 +66,24 @@ export default function GigMakerApplicationsPage() {
 
   const { data: rawApps, loading: appsLoading } = useCollection(appsQuery);
 
-  const applications = useMemo(() => {
+  const filteredApplications = useMemo(() => {
     if (!rawApps) return [];
-    return [...rawApps].sort((a: any, b: any) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
-  }, [rawApps]);
+    
+    return rawApps
+      .filter((app: any) => {
+        const matchesStatus = activeTab === 'all' || app.status === activeTab;
+        const matchesSearch = app.artistName?.toLowerCase().includes(searchQuery.toLowerCase());
+        return matchesStatus && matchesSearch;
+      })
+      .sort((a: any, b: any) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+  }, [rawApps, activeTab, searchQuery]);
+
+  const bulkNumbers = useMemo(() => {
+    return filteredApplications
+      .filter((app: any) => app.artistWhatsapp)
+      .map((app: any) => app.artistWhatsapp)
+      .join(', ');
+  }, [filteredApplications]);
 
   const handleUpdateStatus = (appId: string, status: 'Accepted' | 'Rejected') => {
     if (!db || !eventId || !gigMakerProfile) return;
@@ -66,19 +91,12 @@ export default function GigMakerApplicationsPage() {
     const appRef = doc(db, 'events', eventId, 'applications', appId);
     const updateData: any = { status, updatedAt: serverTimestamp() };
 
-    // Attach Gig Maker info on acceptance for the artist to see
     if (status === 'Accepted') {
       updateData.gigMakerWhatsapp = gigMakerProfile.whatsappNumber || '';
       updateData.businessName = gigMakerProfile.businessName || 'the Gig Maker';
     }
 
     updateDoc(appRef, updateData)
-      .then(() => {
-        toast({
-          title: `Application ${status}`,
-          description: `The artist has been marked as ${status.toLowerCase()}.`,
-        });
-      })
       .catch(async (serverError) => {
         const permissionError = new FirestorePermissionError({
           path: appRef.path,
@@ -87,6 +105,14 @@ export default function GigMakerApplicationsPage() {
         } satisfies SecurityRuleContext);
         errorEmitter.emit('permission-error', permissionError);
       });
+  };
+
+  const copyBulkNumbers = () => {
+    if (!bulkNumbers) return;
+    navigator.clipboard.writeText(bulkNumbers);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+    toast({ title: "Numbers Copied", description: "You can now paste these into your broadcast tool." });
   };
 
   if (userLoading || eventLoading || appsLoading) {
@@ -112,20 +138,62 @@ export default function GigMakerApplicationsPage() {
               <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
                 <span className="flex items-center gap-1"><Calendar className="h-4 w-4" /> {event?.date}</span>
                 <span className="flex items-center gap-1"><MapPin className="h-4 w-4" /> {event?.location}</span>
-                <span className="flex items-center gap-1 text-green-600 font-bold">P{event?.minPrice} - P{event?.maxPrice}</span>
+                <span className="flex items-center gap-1 text-green-600 font-bold font-mono">P{event?.minPrice} - P{event?.maxPrice}</span>
               </div>
             </div>
-            <div className="text-right">
-              <p className="text-xs text-muted-foreground uppercase font-bold tracking-wider">Total Applications</p>
-              <p className="text-4xl font-black text-primary">{applications?.length || 0}</p>
+            
+            <div className="flex flex-col items-end gap-2">
+              <p className="text-xs text-muted-foreground uppercase font-bold tracking-wider">Filtered View</p>
+              <p className="text-4xl font-black text-primary">{filteredApplications.length}</p>
             </div>
           </div>
         </header>
 
+        <Card className="border-none shadow-sm">
+          <CardContent className="p-6">
+            <div className="flex flex-col md:flex-row gap-4 justify-between items-center">
+              <div className="relative w-full md:max-w-sm">
+                <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                <Input 
+                  placeholder="Search artist name..." 
+                  className="pl-10"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+              </div>
+              
+              <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full md:w-auto">
+                <TabsList className="grid w-full grid-cols-4">
+                  <TabsTrigger value="all">All</TabsTrigger>
+                  <TabsTrigger value="pending">Pending</TabsTrigger>
+                  <TabsTrigger value="Accepted">Accepted</TabsTrigger>
+                  <TabsTrigger value="Rejected">Rejected</TabsTrigger>
+                </TabsList>
+              </Tabs>
+            </div>
+          </CardContent>
+        </Card>
+
+        {activeTab !== 'pending' && filteredApplications.length > 0 && (
+          <Alert className="bg-primary/5 border-primary/20">
+            <Megaphone className="h-4 w-4" />
+            <AlertTitle className="font-bold">Bulk Notify {activeTab === 'all' ? 'Current View' : activeTab}</AlertTitle>
+            <AlertDescription className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mt-2">
+              <p className="text-xs text-muted-foreground line-clamp-1">
+                Found {filteredApplications.length} contact numbers. Copy them to broadcast your decision.
+              </p>
+              <Button size="sm" variant="outline" className="gap-2 shrink-0" onClick={copyBulkNumbers}>
+                {copied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+                Copy Numbers
+              </Button>
+            </AlertDescription>
+          </Alert>
+        )}
+
         <div className="grid gap-6">
-          {applications && applications.length > 0 ? (
-            applications.map((app: any) => (
-              <Card key={app.id} className="border-none shadow-md overflow-hidden">
+          {filteredApplications.length > 0 ? (
+            filteredApplications.map((app: any) => (
+              <Card key={app.id} className="border-none shadow-md overflow-hidden slide-up">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <div className="flex items-center gap-4">
                     <Avatar className="h-12 w-12 border-2 border-primary/10">
@@ -143,7 +211,7 @@ export default function GigMakerApplicationsPage() {
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className="text-sm font-bold text-green-600">P{app.price}</p>
+                    <p className="text-sm font-bold text-green-600 font-mono">P{app.price}</p>
                     <Badge className={`mt-1 ${
                       app.status === 'Accepted' ? 'bg-green-500' : 
                       app.status === 'Rejected' ? 'bg-red-500' : 'bg-orange-500'
@@ -162,13 +230,7 @@ export default function GigMakerApplicationsPage() {
                       <h4 className="text-xs font-bold uppercase text-muted-foreground tracking-widest">Song Links</h4>
                       <div className="flex flex-col gap-2">
                         {app.songLinks?.map((link: string, i: number) => (
-                          <a 
-                            key={i} 
-                            href={link} 
-                            target="_blank" 
-                            rel="noopener noreferrer" 
-                            className="inline-flex items-center gap-2 text-xs text-accent hover:underline"
-                          >
+                          <a key={i} href={link} target="_blank" rel="noopener" className="inline-flex items-center gap-2 text-xs text-accent hover:underline">
                             <Music className="h-3 w-3" /> Song {i + 1} <ExternalLink className="h-2 w-2" />
                           </a>
                         )) || <span className="text-xs text-muted-foreground italic">No songs shared</span>}
@@ -178,12 +240,7 @@ export default function GigMakerApplicationsPage() {
                     <div className="space-y-2">
                       <h4 className="text-xs font-bold uppercase text-muted-foreground tracking-widest">Performance Video</h4>
                       {app.videoLink ? (
-                        <a 
-                          href={app.videoLink} 
-                          target="_blank" 
-                          rel="noopener noreferrer" 
-                          className="inline-flex items-center gap-2 text-xs text-accent hover:underline"
-                        >
+                        <a href={app.videoLink} target="_blank" rel="noopener" className="inline-flex items-center gap-2 text-xs text-accent hover:underline">
                           <Video className="h-3 w-3" /> Watch Video <ExternalLink className="h-2 w-2" />
                         </a>
                       ) : (
@@ -228,11 +285,11 @@ export default function GigMakerApplicationsPage() {
             <Card className="border-dashed border-2 py-20 text-center">
               <CardContent className="space-y-4">
                 <div className="bg-primary/5 p-4 rounded-full w-fit mx-auto">
-                  <Music className="h-12 w-12 text-primary/20" />
+                  <Filter className="h-12 w-12 text-primary/20" />
                 </div>
                 <div>
-                  <h2 className="text-xl font-bold">No applications yet</h2>
-                  <p className="text-muted-foreground">Wait for artists to discover and apply for your event.</p>
+                  <h2 className="text-xl font-bold">No results found</h2>
+                  <p className="text-muted-foreground">Adjust your filters or search query.</p>
                 </div>
               </CardContent>
             </Card>
