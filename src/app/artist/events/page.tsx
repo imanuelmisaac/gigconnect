@@ -1,9 +1,10 @@
+
 "use client"
 
 import { useMemo, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUser, useFirestore, useCollection, useDoc } from '@/firebase';
-import { collection, query, where, orderBy, doc, setDoc, serverTimestamp, getDoc } from 'firebase/firestore';
+import { collection, query, where, doc, setDoc, serverTimestamp, getDoc } from 'firebase/firestore';
 import { 
   Loader2, 
   Calendar, 
@@ -15,7 +16,8 @@ import {
   Clock,
   Video,
   Send,
-  AlertTriangle
+  AlertTriangle,
+  AlertCircle
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
@@ -28,6 +30,7 @@ import { Textarea } from '@/components/ui/textarea';
 import Link from 'next/link';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 export default function ArtistEventsPage() {
   const { user, loading: userLoading } = useUser();
@@ -51,14 +54,24 @@ export default function ArtistEventsPage() {
 
   const eventsQuery = useMemo(() => {
     if (!db) return null;
+    // Removed orderBy to avoid composite index requirement
     return query(
       collection(db, 'events'),
-      where('status', '==', 'Open'),
-      orderBy('date', 'asc')
+      where('status', '==', 'Open')
     );
   }, [db]);
 
-  const { data: events, loading: eventsLoading } = useCollection(eventsQuery);
+  const { data: rawEvents, loading: eventsLoading, error: eventsError } = useCollection(eventsQuery);
+
+  // Sort events in memory by date
+  const events = useMemo(() => {
+    if (!rawEvents) return [];
+    return [...rawEvents].sort((a: any, b: any) => {
+      const dateA = a.date || '';
+      const dateB = b.date || '';
+      return dateA.localeCompare(dateB);
+    });
+  }, [rawEvents]);
 
   const [appliedEventIds, setAppliedEventIds] = useState<Set<string>>(new Set());
 
@@ -83,7 +96,6 @@ export default function ArtistEventsPage() {
       const deadlineDate = new Date(selectedEvent.applicationDeadline);
       deadlineDate.setHours(23, 59, 59, 999);
 
-      // 1. Check Deadline
       if (now > deadlineDate) {
         toast({
           variant: "destructive",
@@ -95,7 +107,6 @@ export default function ArtistEventsPage() {
         return;
       }
 
-      // 2. Check if user already applied by attempting to get their specific document
       const appRef = doc(db, 'events', selectedEvent.eventId, 'applications', user.uid);
       const appSnap = await getDoc(appRef);
       
@@ -180,6 +191,17 @@ export default function ArtistEventsPage() {
             <p className="text-muted-foreground">Find and apply for musical events matching your style.</p>
           </div>
         </header>
+
+        {eventsError && (
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Database Error</AlertTitle>
+            <AlertDescription>
+              Could not load events. This might be due to missing database permissions or indexes.
+              <p className="text-[10px] mt-2 opacity-70">{eventsError.message}</p>
+            </AlertDescription>
+          </Alert>
+        )}
 
         {events && events.length > 0 ? (
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -270,17 +292,19 @@ export default function ArtistEventsPage() {
             })}
           </div>
         ) : (
-          <Card className="border-dashed border-2 py-20 text-center">
-            <CardContent className="space-y-4">
-              <div className="bg-primary/5 p-4 rounded-full w-fit mx-auto">
-                <Music className="h-12 w-12 text-primary/20" />
-              </div>
-              <div>
-                <h2 className="text-xl font-bold">No active gigs found</h2>
-                <p className="text-muted-foreground">Check back later for new opportunities.</p>
-              </div>
-            </CardContent>
-          </Card>
+          !eventsLoading && (
+            <Card className="border-dashed border-2 py-20 text-center">
+              <CardContent className="space-y-4">
+                <div className="bg-primary/5 p-4 rounded-full w-fit mx-auto">
+                  <Music className="h-12 w-12 text-primary/20" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold">No active gigs found</h2>
+                  <p className="text-muted-foreground">Check back later for new opportunities.</p>
+                </div>
+              </CardContent>
+            </Card>
+          )
         )}
       </div>
 

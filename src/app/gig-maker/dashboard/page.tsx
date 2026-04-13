@@ -4,7 +4,7 @@
 import { useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUser, useFirestore, useDoc, useCollection } from '@/firebase';
-import { doc, collection, query, where, orderBy, deleteDoc } from 'firebase/firestore';
+import { doc, collection, query, where, deleteDoc } from 'firebase/firestore';
 import { 
   Loader2, 
   LayoutDashboard, 
@@ -17,18 +17,17 @@ import {
   ClipboardList,
   CheckCircle,
   Clock,
-  ArrowRight,
   MapPin,
-  MessageCircle,
   ChevronRight,
   Search,
-  Trash2
+  AlertCircle
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 export default function GigMakerDashboardPage() {
   const { user, loading: userLoading } = useUser();
@@ -45,14 +44,24 @@ export default function GigMakerDashboardPage() {
 
   const eventsQuery = useMemo(() => {
     if (!db || !user) return null;
+    // Removed orderBy to avoid composite index requirement
     return query(
       collection(db, 'events'),
-      where('gigMakerId', '==', user.uid),
-      orderBy('createdAt', 'desc')
+      where('gigMakerId', '==', user.uid)
     );
   }, [db, user]);
 
-  const { data: events, loading: eventsLoading } = useCollection(eventsQuery);
+  const { data: rawEvents, loading: eventsLoading, error: eventsError } = useCollection(eventsQuery);
+
+  // Sort events in memory
+  const events = useMemo(() => {
+    if (!rawEvents) return [];
+    return [...rawEvents].sort((a: any, b: any) => {
+      const timeA = a.createdAt?.seconds || 0;
+      const timeB = b.createdAt?.seconds || 0;
+      return timeB - timeA;
+    });
+  }, [rawEvents]);
 
   // Auto-delete events concluded > 2 days ago
   useEffect(() => {
@@ -122,10 +131,6 @@ export default function GigMakerDashboardPage() {
               Browse Artists
             </Button>
           </Link>
-          <Button variant="ghost" className="w-full justify-start text-white hover:bg-white/10">
-            <Calendar className="mr-2 h-4 w-4" />
-            My Events
-          </Button>
           <Button variant="ghost" className="w-full justify-start text-white hover:bg-white/10" onClick={() => router.push('/gig-maker/setup')}>
             <Settings className="mr-2 h-4 w-4" />
             Settings
@@ -161,6 +166,17 @@ export default function GigMakerDashboardPage() {
             </Link>
           </div>
         </header>
+
+        {eventsError && (
+          <Alert variant="destructive" className="mb-8">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Database Error</AlertTitle>
+            <AlertDescription>
+              Could not load your events. This might be due to missing database permissions.
+              <p className="text-[10px] mt-2 opacity-70">{eventsError.message}</p>
+            </AlertDescription>
+          </Alert>
+        )}
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <Card className="border-none shadow-sm">
@@ -250,22 +266,24 @@ export default function GigMakerDashboardPage() {
                 </Card>
               ))
             ) : (
-              <Card className="border-dashed border-2 bg-transparent">
-                <CardContent className="p-12 text-center space-y-4">
-                  <div className="bg-primary/5 p-4 rounded-full w-fit mx-auto">
-                    <Calendar className="h-12 w-12 text-primary/20" />
-                  </div>
-                  <div>
-                    <h4 className="font-bold">No active events</h4>
-                    <p className="text-sm text-muted-foreground">Concluded events are automatically deleted after 2 days.</p>
-                  </div>
-                  <Link href="/gig-maker/create-event">
-                    <Button variant="outline" className="gap-2 border-primary text-primary">
-                      <Plus className="h-4 w-4" /> Create Event
-                    </Button>
-                  </Link>
-                </CardContent>
-              </Card>
+              !eventsLoading && (
+                <Card className="border-dashed border-2 bg-transparent">
+                  <CardContent className="p-12 text-center space-y-4">
+                    <div className="bg-primary/5 p-4 rounded-full w-fit mx-auto">
+                      <Calendar className="h-12 w-12 text-primary/20" />
+                    </div>
+                    <div>
+                      <h4 className="font-bold">No active events</h4>
+                      <p className="text-sm text-muted-foreground">Concluded events are automatically deleted after 2 days.</p>
+                    </div>
+                    <Link href="/gig-maker/create-event">
+                      <Button variant="outline" className="gap-2 border-primary text-primary">
+                        <Plus className="h-4 w-4" /> Create Event
+                      </Button>
+                    </Link>
+                  </CardContent>
+                </Card>
+              )
             )}
           </div>
         </section>
