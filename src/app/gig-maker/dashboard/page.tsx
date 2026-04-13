@@ -25,6 +25,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
+import Link from 'next/link';
 
 export default function GigMakerDashboardPage() {
   const { user, loading: userLoading } = useUser();
@@ -115,10 +116,12 @@ export default function GigMakerDashboardPage() {
             <p className="text-muted-foreground">{profile?.businessName || 'Your Business'}</p>
           </div>
           
-          <Button className="bg-accent hover:bg-accent/90 text-white font-bold gap-2">
-            <Plus className="h-5 w-5" />
-            Create Event
-          </Button>
+          <Link href="/gig-maker/create-event">
+            <Button className="bg-accent hover:bg-accent/90 text-white font-bold gap-2">
+              <Plus className="h-5 w-5" />
+              Create Event
+            </Button>
+          </Link>
         </header>
 
         {/* Stats Grid */}
@@ -215,9 +218,11 @@ export default function GigMakerDashboardPage() {
                       <h4 className="font-bold">No events created yet</h4>
                       <p className="text-sm text-muted-foreground">Start by creating your first musical event.</p>
                     </div>
-                    <Button variant="outline" className="gap-2">
-                      <Plus className="h-4 w-4" /> Create Event
-                    </Button>
+                    <Link href="/gig-maker/create-event">
+                      <Button variant="outline" className="gap-2">
+                        <Plus className="h-4 w-4" /> Create Event
+                      </Button>
+                    </Link>
                   </CardContent>
                 </Card>
               )}

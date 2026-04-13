@@ -169,22 +169,60 @@
           "type": "string",
           "format": "date"
         },
+        "applicationDeadline": {
+          "type": "string",
+          "format": "date"
+        },
+        "maxApplicants": {
+          "type": "number"
+        },
         "location": {
           "type": "string"
         },
-        "budget": {
+        "genres": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "minPrice": {
           "type": "number"
+        },
+        "maxPrice": {
+          "type": "number"
+        },
+        "experienceLevel": {
+          "type": "string",
+          "enum": [
+            "Upcoming",
+            "Established"
+          ]
         },
         "status": {
           "type": "string",
-          "enum": ["Open", "Closed", "Completed"]
+          "enum": [
+            "Open",
+            "Closed",
+            "Completed"
+          ]
         },
         "createdAt": {
           "type": "string",
           "format": "date-time"
         }
       },
-      "required": ["eventId", "gigMakerId", "title", "date", "status"]
+      "required": [
+        "eventId",
+        "gigMakerId",
+        "title",
+        "date",
+        "status",
+        "location",
+        "genres",
+        "minPrice",
+        "maxPrice",
+        "experienceLevel"
+      ]
     },
     "Application": {
       "title": "Application",
@@ -202,14 +240,24 @@
         },
         "status": {
           "type": "string",
-          "enum": ["Pending", "Reviewed", "Accepted", "Rejected"]
+          "enum": [
+            "Pending",
+            "Reviewed",
+            "Accepted",
+            "Rejected"
+          ]
         },
         "createdAt": {
           "type": "string",
           "format": "date-time"
         }
       },
-      "required": ["applicationId", "eventId", "artistId", "status"]
+      "required": [
+        "applicationId",
+        "eventId",
+        "artistId",
+        "status"
+      ]
     }
   },
   "auth": {
