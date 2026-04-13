@@ -1,10 +1,10 @@
 
 "use client"
 
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUser, useFirestore, useDoc, useCollection } from '@/firebase';
-import { doc, collectionGroup, query, where, orderBy, collection } from 'firebase/firestore';
+import { doc, collectionGroup, query, where, orderBy, collection, updateDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
 import { 
   Loader2, 
   LayoutDashboard, 
@@ -19,7 +19,11 @@ import {
   Briefcase,
   Search,
   Sparkles,
-  Users
+  Users,
+  CheckCircle2,
+  XCircle,
+  Trash2,
+  Archive
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
@@ -27,11 +31,25 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
 import { WhatsAppButton } from '@/components/whatsapp-button';
+import { useToast } from '@/hooks/use-toast';
+import { 
+  AlertDialog, 
+  AlertDialogAction, 
+  AlertDialogCancel, 
+  AlertDialogContent, 
+  AlertDialogDescription, 
+  AlertDialogFooter, 
+  AlertDialogHeader, 
+  AlertDialogTitle 
+} from '@/components/ui/alert-dialog';
 
 export default function ArtistDashboardPage() {
   const { user, loading: userLoading } = useUser();
   const db = useFirestore();
   const router = useRouter();
+  const { toast } = useToast();
+
+  const [requestToDelete, setRequestToDelete] = useState<string | null>(null);
 
   const artistDocRef = useMemo(() => {
     if (!db || !user) return null;
@@ -45,23 +63,33 @@ export default function ArtistDashboardPage() {
     if (!db || !user) return null;
     return query(
       collectionGroup(db, 'applications'),
-      where('artistId', '==', user.uid),
-      orderBy('createdAt', 'desc')
+      where('artistId', '==', user.uid)
     );
   }, [db, user]);
 
-  const { data: applications, loading: appsLoading } = useCollection(applicationsQuery);
+  const { data: rawApps, loading: appsLoading } = useCollection(applicationsQuery);
 
   // Features requests received
   const featuresQuery = useMemo(() => {
     if (!db || !user) return null;
     return query(
-      collection(db, 'artists', user.uid, 'features'),
-      orderBy('createdAt', 'desc')
+      collection(db, 'artists', user.uid, 'features')
     );
   }, [db, user]);
 
-  const { data: featureRequests, loading: featuresLoading } = useCollection(featuresQuery);
+  const { data: rawFeatures, loading: featuresLoading } = useCollection(featuresQuery);
+
+  // Memory sort applications
+  const applications = useMemo(() => {
+    if (!rawApps) return [];
+    return [...rawApps].sort((a: any, b: any) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+  }, [rawApps]);
+
+  // Memory sort feature requests
+  const featureRequests = useMemo(() => {
+    if (!rawFeatures) return [];
+    return [...rawFeatures].sort((a: any, b: any) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+  }, [rawFeatures]);
 
   useEffect(() => {
     if (!userLoading && !user) {
@@ -75,6 +103,37 @@ export default function ArtistDashboardPage() {
       }
     }
   }, [user, userLoading, artistProfile, profileLoading, router]);
+
+  const handleUpdateFeatureStatus = async (reqId: string, status: 'Accepted' | 'Rejected') => {
+    if (!db || !user) return;
+    const reqRef = doc(db, 'artists', user.uid, 'features', reqId);
+    
+    try {
+      await updateDoc(reqRef, { 
+        status, 
+        updatedAt: serverTimestamp() 
+      });
+      toast({
+        title: `Request ${status}`,
+        description: status === 'Accepted' ? "You can now contact them via WhatsApp." : "Request has been declined.",
+      });
+    } catch (e: any) {
+      toast({ variant: "destructive", title: "Error", description: e.message });
+    }
+  };
+
+  const handleDeleteFeature = async (reqId: string) => {
+    if (!db || !user) return;
+    const reqRef = doc(db, 'artists', user.uid, 'features', reqId);
+    
+    try {
+      await deleteDoc(reqRef);
+      toast({ title: "Request Removed", description: "The request has been deleted from your dashboard." });
+      setRequestToDelete(null);
+    } catch (e: any) {
+      toast({ variant: "destructive", title: "Error", description: e.message });
+    }
+  };
 
   if (userLoading || profileLoading) {
     return (
@@ -246,21 +305,33 @@ export default function ArtistDashboardPage() {
                     <Loader2 className="h-6 w-6 animate-spin text-primary" />
                   </div>
                 ) : applications && applications.length > 0 ? (
-                  applications.slice(0, 3).map((app: any) => (
+                  applications.slice(0, 5).map((app: any) => (
                     <Card key={app.id} className="border-none shadow-sm hover:shadow-md transition-shadow">
-                      <CardContent className="p-4 flex items-center justify-between">
+                      <CardContent className="p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                         <div className="flex items-center gap-4">
                           <div className="h-10 w-10 rounded-lg bg-secondary flex items-center justify-center text-primary font-bold">
                             P{app.price}
                           </div>
                           <div>
-                            <h4 className="font-bold text-sm">Event Booking</h4>
+                            <h4 className="font-bold text-sm">Application for Gig</h4>
                             <p className="text-[10px] text-muted-foreground">{new Date(app.createdAt?.seconds * 1000).toLocaleDateString()}</p>
                           </div>
                         </div>
-                        <Badge variant={app.status === 'Accepted' ? 'default' : 'secondary'} className="text-[10px]">
-                          {app.status}
-                        </Badge>
+                        <div className="flex items-center gap-3 self-end sm:self-center">
+                          <Badge variant={app.status === 'Accepted' ? 'default' : app.status === 'Rejected' ? 'destructive' : 'secondary'} className="text-[10px]">
+                            {app.status}
+                          </Badge>
+                          {app.status === 'Accepted' && app.gigMakerWhatsapp && (
+                            <WhatsAppButton 
+                              phoneNumber={app.gigMakerWhatsapp}
+                              message={`Hi ${app.businessName || 'there'}, my application for the event was accepted. I'm ready to talk about the details!`}
+                              size="sm"
+                              className="bg-green-600 text-white hover:bg-green-700 font-bold h-8 text-xs"
+                            >
+                              Contact Gig Maker
+                            </WhatsAppButton>
+                          )}
+                        </div>
                       </CardContent>
                     </Card>
                   ))
@@ -283,28 +354,77 @@ export default function ArtistDashboardPage() {
                 ) : featureRequests && featureRequests.length > 0 ? (
                   featureRequests.map((req: any) => (
                     <Card key={req.id} className="border-none shadow-sm hover:shadow-md transition-shadow">
-                      <CardContent className="p-4 flex items-center justify-between">
-                        <div className="flex items-center gap-4">
-                          <Avatar className="h-10 w-10 border">
-                            <AvatarFallback className="bg-secondary text-primary font-bold text-xs">
-                              {req.senderName?.substring(0, 2).toUpperCase()}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <h4 className="font-bold text-sm">{req.senderName}</h4>
-                            <p className="text-[10px] text-muted-foreground">Requested a Feature</p>
+                      <CardContent className="p-4 space-y-4">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-4">
+                            <Avatar className="h-10 w-10 border">
+                              <AvatarFallback className="bg-secondary text-primary font-bold text-xs">
+                                {req.senderName?.substring(0, 2).toUpperCase()}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div>
+                              <h4 className="font-bold text-sm">{req.senderName}</h4>
+                              <p className="text-[10px] text-muted-foreground">Request: {req.status}</p>
+                            </div>
                           </div>
+                          <Badge variant="outline" className="text-[10px]">{req.status}</Badge>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <Badge className="bg-accent/10 text-accent border-none text-[10px]">{req.status}</Badge>
-                          {req.senderWhatsapp && (
-                            <WhatsAppButton 
-                              phoneNumber={req.senderWhatsapp} 
-                              iconOnly 
-                              size="sm"
-                              variant="ghost"
-                              className="h-8 w-8 text-green-500"
-                            />
+                        
+                        <p className="text-xs text-muted-foreground bg-muted/30 p-3 rounded-lg italic">
+                          "{req.message}"
+                        </p>
+
+                        <div className="flex flex-wrap items-center justify-end gap-2">
+                          {req.status === 'pending' && (
+                            <>
+                              <Button 
+                                size="sm" 
+                                className="bg-green-600 hover:bg-green-700 text-white font-bold h-8 gap-1"
+                                onClick={() => handleUpdateFeatureStatus(req.id, 'Accepted')}
+                              >
+                                <CheckCircle2 className="h-3 w-3" /> Accept
+                              </Button>
+                              <Button 
+                                size="sm" 
+                                variant="destructive" 
+                                className="h-8 font-bold gap-1"
+                                onClick={() => handleUpdateFeatureStatus(req.id, 'Rejected')}
+                              >
+                                <XCircle className="h-3 w-3" /> Reject
+                              </Button>
+                            </>
+                          )}
+                          
+                          {req.status === 'Accepted' && (
+                            <>
+                              {req.senderWhatsapp && (
+                                <WhatsAppButton 
+                                  phoneNumber={req.senderWhatsapp} 
+                                  message={`Hi ${req.senderName}, I've accepted your collaboration request on GigConnect. Let's work!`}
+                                  size="sm"
+                                  className="bg-green-600 text-white hover:bg-green-700 font-bold h-8"
+                                />
+                              )}
+                              <Button 
+                                variant="outline" 
+                                size="sm" 
+                                className="h-8 gap-1 text-muted-foreground"
+                                onClick={() => setRequestToDelete(req.id)}
+                              >
+                                <Archive className="h-3 w-3" /> Done
+                              </Button>
+                            </>
+                          )}
+
+                          {req.status === 'Rejected' && (
+                             <Button 
+                             variant="ghost" 
+                             size="sm" 
+                             className="h-8 gap-1 text-destructive"
+                             onClick={() => setRequestToDelete(req.id)}
+                           >
+                             <Trash2 className="h-3 w-3" /> Clear
+                           </Button>
                           )}
                         </div>
                       </CardContent>
@@ -318,6 +438,26 @@ export default function ArtistDashboardPage() {
           </div>
         </div>
       </main>
+
+      <AlertDialog open={!!requestToDelete} onOpenChange={(open) => !open && setRequestToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will remove the request from your dashboard. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={() => requestToDelete && handleDeleteFeature(requestToDelete)}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

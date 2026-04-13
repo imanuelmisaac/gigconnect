@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useMemo } from 'react';
@@ -33,6 +34,13 @@ export default function GigMakerApplicationsPage() {
   const router = useRouter();
   const { toast } = useToast();
 
+  const gigMakerProfileRef = useMemo(() => {
+    if (!db || !user) return null;
+    return doc(db, 'gig-makers', user.uid);
+  }, [db, user]);
+
+  const { data: gigMakerProfile } = useDoc(gigMakerProfileRef);
+
   const eventDocRef = useMemo(() => {
     if (!db || !eventId) return null;
     return doc(db, 'events', eventId);
@@ -45,13 +53,24 @@ export default function GigMakerApplicationsPage() {
     return query(collection(db, 'events', eventId, 'applications'));
   }, [db, eventId]);
 
-  const { data: applications, loading: appsLoading } = useCollection(appsQuery);
+  const { data: rawApps, loading: appsLoading } = useCollection(appsQuery);
+
+  const applications = useMemo(() => {
+    if (!rawApps) return [];
+    return [...rawApps].sort((a: any, b: any) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+  }, [rawApps]);
 
   const handleUpdateStatus = (appId: string, status: 'Accepted' | 'Rejected') => {
-    if (!db || !eventId) return;
+    if (!db || !eventId || !gigMakerProfile) return;
 
     const appRef = doc(db, 'events', eventId, 'applications', appId);
-    const updateData = { status, updatedAt: serverTimestamp() };
+    const updateData: any = { status, updatedAt: serverTimestamp() };
+
+    // Attach Gig Maker info on acceptance for the artist to see
+    if (status === 'Accepted') {
+      updateData.gigMakerWhatsapp = gigMakerProfile.whatsappNumber || '';
+      updateData.businessName = gigMakerProfile.businessName || 'the Gig Maker';
+    }
 
     updateDoc(appRef, updateData)
       .then(() => {
