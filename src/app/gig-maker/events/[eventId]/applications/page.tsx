@@ -198,7 +198,7 @@ export default function GigMakerApplicationsPage() {
                   {app.artistWhatsapp && (
                     <WhatsAppButton 
                       phoneNumber={app.artistWhatsapp} 
-                      message={`Hi ${app.artistName}, I'm interested in your application for the event "${event?.title}".`}
+                      message={`Hi ${app.artistName}, I saw your application for ${event?.title}. Let's discuss booking.`}
                       variant="outline"
                       className="border-green-500 text-green-600 hover:bg-green-50 font-bold"
                     />
