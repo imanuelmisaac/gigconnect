@@ -1,0 +1,230 @@
+
+"use client"
+
+import { useMemo } from 'react';
+import { useParams, useRouter } from 'next/navigation';
+import { useUser, useFirestore, useCollection, useDoc } from '@/firebase';
+import { doc, collection, query, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { 
+  Loader2, 
+  ArrowLeft, 
+  Music, 
+  CheckCircle2, 
+  XCircle, 
+  MessageCircle, 
+  Video, 
+  ExternalLink,
+  Calendar,
+  MapPin,
+  DollarSign
+} from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { useToast } from '@/hooks/use-toast';
+import Link from 'next/link';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
+
+export default function GigMakerApplicationsPage() {
+  const params = useParams();
+  const eventId = params.eventId as string;
+  const { user, loading: userLoading } = useUser();
+  const db = useFirestore();
+  const router = useRouter();
+  const { toast } = useToast();
+
+  const eventDocRef = useMemo(() => {
+    if (!db || !eventId) return null;
+    return doc(db, 'events', eventId);
+  }, [db, eventId]);
+
+  const { data: event, loading: eventLoading } = useDoc(eventDocRef);
+
+  const appsQuery = useMemo(() => {
+    if (!db || !eventId) return null;
+    return query(collection(db, 'events', eventId, 'applications'));
+  }, [db, eventId]);
+
+  const { data: applications, loading: appsLoading } = useCollection(appsQuery);
+
+  const handleUpdateStatus = (appId: string, status: 'Accepted' | 'Rejected') => {
+    if (!db || !eventId) return;
+
+    const appRef = doc(db, 'events', eventId, 'applications', appId);
+    const updateData = { status, updatedAt: serverTimestamp() };
+
+    updateDoc(appRef, updateData)
+      .then(() => {
+        toast({
+          title: `Application ${status}`,
+          description: `The artist has been notified of your decision.`,
+        });
+      })
+      .catch(async (serverError) => {
+        const permissionError = new FirestorePermissionError({
+          path: appRef.path,
+          operation: 'update',
+          requestResourceData: updateData,
+        } satisfies SecurityRuleContext);
+        errorEmitter.emit('permission-error', permissionError);
+      });
+  };
+
+  if (userLoading || eventLoading || appsLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-secondary/10">
+        <Loader2 className="h-10 w-10 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-secondary/10 py-12 px-4">
+      <div className="max-w-6xl mx-auto space-y-8">
+        <header className="space-y-4">
+          <Link href="/gig-maker/dashboard" className="inline-flex items-center text-sm text-muted-foreground hover:text-primary transition-colors">
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back to Dashboard
+          </Link>
+          
+          <div className="bg-white p-6 rounded-xl shadow-sm border flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+            <div className="space-y-2">
+              <h1 className="text-3xl font-bold text-primary font-headline">{event?.title}</h1>
+              <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
+                <span className="flex items-center gap-1"><Calendar className="h-4 w-4" /> {event?.date}</span>
+                <span className="flex items-center gap-1"><MapPin className="h-4 w-4" /> {event?.location}</span>
+                <span className="flex items-center gap-1 text-green-600 font-bold"><DollarSign className="h-4 w-4" /> ${event?.minPrice} - ${event?.maxPrice}</span>
+              </div>
+            </div>
+            <div className="text-right">
+              <p className="text-xs text-muted-foreground uppercase font-bold tracking-wider">Total Applications</p>
+              <p className="text-4xl font-black text-primary">{applications?.length || 0}</p>
+            </div>
+          </div>
+        </header>
+
+        <div className="grid gap-6">
+          {applications && applications.length > 0 ? (
+            applications.map((app: any) => (
+              <Card key={app.id} className="border-none shadow-md overflow-hidden">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <div className="flex items-center gap-4">
+                    <Avatar className="h-12 w-12 border-2 border-primary/10">
+                      <AvatarFallback className="bg-secondary text-primary font-bold">
+                        {app.artistName?.substring(0, 2).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <CardTitle className="text-xl font-headline">{app.artistName}</CardTitle>
+                      <div className="flex gap-2 mt-1">
+                        {app.artistGenres?.map((g: string) => (
+                          <Badge key={g} variant="secondary" className="text-[10px] py-0">{g}</Badge>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm font-bold text-green-600">${app.price}</p>
+                    <Badge className={`mt-1 ${
+                      app.status === 'Accepted' ? 'bg-green-500' : 
+                      app.status === 'Rejected' ? 'bg-red-500' : 'bg-orange-500'
+                    }`}>
+                      {app.status}
+                    </Badge>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-4 pt-4">
+                  <div className="bg-muted/30 p-4 rounded-lg italic text-sm text-muted-foreground">
+                    "{app.message || 'No message provided.'}"
+                  </div>
+
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <h4 className="text-xs font-bold uppercase text-muted-foreground tracking-widest">Song Links</h4>
+                      <div className="flex flex-col gap-2">
+                        {app.songLinks?.map((link: string, i: number) => (
+                          <a 
+                            key={i} 
+                            href={link} 
+                            target="_blank" 
+                            rel="noopener noreferrer" 
+                            className="inline-flex items-center gap-2 text-xs text-accent hover:underline"
+                          >
+                            <Music className="h-3 w-3" /> Song {i + 1} <ExternalLink className="h-2 w-2" />
+                          </a>
+                        )) || <span className="text-xs text-muted-foreground italic">No songs shared</span>}
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <h4 className="text-xs font-bold uppercase text-muted-foreground tracking-widest">Performance Video</h4>
+                      {app.videoLink ? (
+                        <a 
+                          href={app.videoLink} 
+                          target="_blank" 
+                          rel="noopener noreferrer" 
+                          className="inline-flex items-center gap-2 text-xs text-accent hover:underline"
+                        >
+                          <Video className="h-3 w-3" /> Watch Video <ExternalLink className="h-2 w-2" />
+                        </a>
+                      ) : (
+                        <span className="text-xs text-muted-foreground italic">No video shared</span>
+                      )}
+                    </div>
+                  </div>
+                </CardContent>
+                <CardFooter className="bg-muted/10 border-t p-4 flex flex-wrap justify-between gap-4">
+                  <div className="flex gap-2">
+                    <Button 
+                      size="sm" 
+                      className="bg-green-600 hover:bg-green-700 font-bold gap-2" 
+                      onClick={() => handleUpdateStatus(app.id, 'Accepted')}
+                      disabled={app.status === 'Accepted'}
+                    >
+                      <CheckCircle2 className="h-4 w-4" /> Accept
+                    </Button>
+                    <Button 
+                      size="sm" 
+                      variant="destructive" 
+                      className="font-bold gap-2"
+                      onClick={() => handleUpdateStatus(app.id, 'Rejected')}
+                      disabled={app.status === 'Rejected'}
+                    >
+                      <XCircle className="h-4 w-4" /> Reject
+                    </Button>
+                  </div>
+                  
+                  {app.artistWhatsapp && (
+                    <a 
+                      href={`https://wa.me/${app.artistWhatsapp.replace(/\D/g, '')}`} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                    >
+                      <Button size="sm" variant="outline" className="border-green-500 text-green-600 hover:bg-green-50 font-bold gap-2">
+                        <MessageCircle className="h-4 w-4" /> Contact via WhatsApp
+                      </Button>
+                    </a>
+                  )}
+                </CardFooter>
+              </Card>
+            ))
+          ) : (
+            <Card className="border-dashed border-2 py-20 text-center">
+              <CardContent className="space-y-4">
+                <div className="bg-primary/5 p-4 rounded-full w-fit mx-auto">
+                  <Briefcase className="h-12 w-12 text-primary/20" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold">No applications yet</h2>
+                  <p className="text-muted-foreground">Wait for artists to discover and apply for your event.</p>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}

@@ -41,11 +41,9 @@ export default function ArtistEventsPage() {
   const [isApplyDialogOpen, setIsApplyDialogOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   
-  // Application Form State
   const [proposedPrice, setProposedPrice] = useState('');
   const [message, setMessage] = useState('');
 
-  // Fetch Artist Profile for auto-fill
   const artistProfileRef = useMemo(() => {
     if (!db || !user) return null;
     return doc(db, 'artists', user.uid);
@@ -66,7 +64,6 @@ export default function ArtistEventsPage() {
 
   const [appliedEventIds, setAppliedEventIds] = useState<Set<string>>(new Set());
 
-  // Effect to handle dialog opening and auto-filling
   useEffect(() => {
     if (selectedEvent && artistProfile) {
       setProposedPrice(artistProfile.bookingPrice?.toString() || '');
@@ -84,10 +81,8 @@ export default function ArtistEventsPage() {
     setSubmitting(true);
 
     try {
-      // 1. Check Deadline
       const now = new Date();
       const deadlineDate = new Date(selectedEvent.applicationDeadline);
-      // Set deadline to the end of the day
       deadlineDate.setHours(23, 59, 59, 999);
 
       if (now > deadlineDate) {
@@ -101,13 +96,11 @@ export default function ArtistEventsPage() {
         return;
       }
 
-      // 2. Check Max Applicants
       const appsRef = collection(db, 'events', selectedEvent.eventId, 'applications');
       const appsSnap = await getDocs(appsRef);
       
       const userHasAlreadyApplied = appsSnap.docs.some(d => d.id === user.uid);
       
-      // If user hasn't applied yet, check if there is space
       if (!userHasAlreadyApplied && appsSnap.size >= (selectedEvent.maxApplicants || Infinity)) {
         toast({
           variant: "destructive",
@@ -119,7 +112,6 @@ export default function ArtistEventsPage() {
         return;
       }
 
-      // 3. Proceed with saving application
       const applicationId = user.uid;
       const appRef = doc(db, 'events', selectedEvent.eventId, 'applications', applicationId);
 
@@ -127,6 +119,9 @@ export default function ArtistEventsPage() {
         applicationId,
         eventId: selectedEvent.eventId,
         artistId: user.uid,
+        artistName: artistProfile.artistName || 'Unknown Artist',
+        artistGenres: artistProfile.genres || [],
+        artistWhatsapp: artistProfile.whatsappNumber || '',
         price: Number(proposedPrice),
         message: message,
         songLinks: artistProfile.songLinks || [],
@@ -295,7 +290,6 @@ export default function ArtistEventsPage() {
         )}
       </div>
 
-      {/* Application Dialog */}
       <Dialog open={isApplyDialogOpen} onOpenChange={setIsApplyDialogOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>

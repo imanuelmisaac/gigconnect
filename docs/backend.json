@@ -238,6 +238,16 @@
         "artistId": {
           "type": "string"
         },
+        "artistName": {
+          "type": "string"
+        },
+        "artistGenres": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "artistWhatsapp": {
+          "type": "string"
+        },
         "price": {
           "type": "number"
         },
