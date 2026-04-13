@@ -4,7 +4,7 @@
 import { useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUser, useFirestore, useDoc, useCollection } from '@/firebase';
-import { doc, collection, query, where, orderBy } from 'firebase/firestore';
+import { doc, collection, query, where, orderBy, deleteDoc } from 'firebase/firestore';
 import { 
   Loader2, 
   LayoutDashboard, 
@@ -21,17 +21,20 @@ import {
   MapPin,
   MessageCircle,
   ChevronRight,
-  Search
+  Search,
+  Trash2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
+import { useToast } from '@/hooks/use-toast';
 
 export default function GigMakerDashboardPage() {
   const { user, loading: userLoading } = useUser();
   const db = useFirestore();
   const router = useRouter();
+  const { toast } = useToast();
 
   const gigMakerDocRef = useMemo(() => {
     if (!db || !user) return null;
@@ -50,6 +53,39 @@ export default function GigMakerDashboardPage() {
   }, [db, user]);
 
   const { data: events, loading: eventsLoading } = useCollection(eventsQuery);
+
+  // Auto-delete events concluded > 2 days ago
+  useEffect(() => {
+    if (!events || events.length === 0) return;
+
+    const cleanupOldEvents = async () => {
+      const now = new Date();
+      const twoDaysInMs = 2 * 24 * 60 * 60 * 1000;
+      let deletedCount = 0;
+
+      for (const event of events) {
+        if (!event.date) continue;
+        const eventDate = new Date(event.date);
+        if (now.getTime() - eventDate.getTime() > twoDaysInMs) {
+          try {
+            await deleteDoc(doc(db, 'events', event.eventId));
+            deletedCount++;
+          } catch (e) {
+            console.error("Failed to cleanup event:", event.eventId);
+          }
+        }
+      }
+
+      if (deletedCount > 0) {
+        toast({
+          title: "Cleanup Complete",
+          description: `Removed ${deletedCount} concluded events from your listing.`,
+        });
+      }
+    };
+
+    cleanupOldEvents();
+  }, [events, db, toast]);
 
   useEffect(() => {
     if (!userLoading && !user) {
@@ -73,7 +109,7 @@ export default function GigMakerDashboardPage() {
       <aside className="w-64 bg-primary text-white hidden md:flex flex-col shrink-0">
         <div className="p-6 border-b border-white/10 flex items-center gap-2">
           <Building2 className="h-6 w-6 text-accent" />
-          <span className="text-xl font-bold font-headline">GigConnect</span>
+          <span className="text-xl font-bold font-headline text-white">GigConnect</span>
         </div>
         <nav className="flex-1 p-4 space-y-2">
           <Button variant="ghost" className="w-full justify-start text-white hover:bg-white/10 bg-white/5">
@@ -112,13 +148,13 @@ export default function GigMakerDashboardPage() {
           
           <div className="flex gap-2">
             <Link href="/gig-maker/artists">
-              <Button variant="outline" className="font-bold gap-2">
+              <Button variant="outline" className="font-bold gap-2 border-primary/20 text-primary">
                 <Search className="h-4 w-4" />
                 Find Talent
               </Button>
             </Link>
             <Link href="/gig-maker/create-event">
-              <Button className="bg-accent hover:bg-accent/90 text-white font-bold gap-2">
+              <Button className="bg-accent hover:bg-accent/90 text-white font-bold gap-2 shadow-sm">
                 <Plus className="h-5 w-5" />
                 Create Event
               </Button>
@@ -144,8 +180,8 @@ export default function GigMakerDashboardPage() {
                 <ClipboardList className="h-6 w-6" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Applications</p>
-                <p className="text-2xl font-bold">Active</p>
+                <p className="text-sm text-muted-foreground">Cleanup Policy</p>
+                <p className="text-xs font-bold text-orange-600">2 Day Auto-Delete</p>
               </div>
             </CardContent>
           </Card>
@@ -156,7 +192,7 @@ export default function GigMakerDashboardPage() {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Confirmed</p>
-                <p className="text-2xl font-bold">4</p>
+                <p className="text-2xl font-bold">Live</p>
               </div>
             </CardContent>
           </Card>
@@ -166,8 +202,8 @@ export default function GigMakerDashboardPage() {
                 <Clock className="h-6 w-6" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Hours of Music</p>
-                <p className="text-2xl font-bold">28h</p>
+                <p className="text-sm text-muted-foreground">System Status</p>
+                <p className="text-2xl font-bold text-green-500">Active</p>
               </div>
             </CardContent>
           </Card>
@@ -175,7 +211,7 @@ export default function GigMakerDashboardPage() {
 
         <section className="space-y-4">
           <div className="flex items-center justify-between">
-            <h3 className="text-xl font-bold font-headline">Manage My Events</h3>
+            <h3 className="text-xl font-bold font-headline text-primary">Manage My Events</h3>
           </div>
           
           <div className="grid gap-4">
@@ -204,7 +240,7 @@ export default function GigMakerDashboardPage() {
                         <Badge variant="outline" className="mb-1">{event.status}</Badge>
                       </div>
                       <Link href={`/gig-maker/events/${event.eventId}/applications`}>
-                        <Button size="sm" className="bg-primary hover:bg-primary/90 gap-1">
+                        <Button size="sm" className="bg-primary hover:bg-primary/90 gap-1 text-white">
                           View Applications
                           <ChevronRight className="h-4 w-4" />
                         </Button>
@@ -220,11 +256,11 @@ export default function GigMakerDashboardPage() {
                     <Calendar className="h-12 w-12 text-primary/20" />
                   </div>
                   <div>
-                    <h4 className="font-bold">No events created yet</h4>
-                    <p className="text-sm text-muted-foreground">Start by creating your first musical event.</p>
+                    <h4 className="font-bold">No active events</h4>
+                    <p className="text-sm text-muted-foreground">Concluded events are automatically deleted after 2 days.</p>
                   </div>
                   <Link href="/gig-maker/create-event">
-                    <Button variant="outline" className="gap-2">
+                    <Button variant="outline" className="gap-2 border-primary text-primary">
                       <Plus className="h-4 w-4" /> Create Event
                     </Button>
                   </Link>

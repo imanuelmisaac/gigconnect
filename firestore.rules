@@ -19,10 +19,18 @@ service cloud.firestore {
       allow read, write: if isSignedIn() && isOwner(userId);
     }
 
-    // Artists/DJs Collection: Both roles share the same collection for talent discovery
+    // Artists/DJs Collection
     match /artists/{userId} {
       allow read: if isSignedIn();
       allow write: if isSignedIn() && isOwner(userId);
+
+      // Feature Requests sub-collection
+      match /features/{requestId} {
+        allow read: if isSignedIn() && (isOwner(userId) || isOwner(requestId));
+        allow create: if isSignedIn() && isOwner(requestId);
+        allow update: if isSignedIn() && isOwner(userId); // Only the target can accept/reject
+        allow delete: if isSignedIn() && (isOwner(userId) || isOwner(requestId));
+      }
     }
 
     // Gig Makers Collection

@@ -1,9 +1,10 @@
+
 "use client"
 
 import { useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUser, useFirestore, useDoc, useCollection } from '@/firebase';
-import { doc, collectionGroup, query, where, orderBy } from 'firebase/firestore';
+import { doc, collectionGroup, query, where, orderBy, collection } from 'firebase/firestore';
 import { 
   Loader2, 
   LayoutDashboard, 
@@ -16,7 +17,9 @@ import {
   ExternalLink,
   MapPin,
   Briefcase,
-  Search
+  Search,
+  Sparkles,
+  Users
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
@@ -37,7 +40,7 @@ export default function ArtistDashboardPage() {
 
   const { data: artistProfile, loading: profileLoading } = useDoc(artistDocRef);
 
-  // Use collectionGroup to find all applications belonging to this artist across all events
+  // Gigs applications
   const applicationsQuery = useMemo(() => {
     if (!db || !user) return null;
     return query(
@@ -48,6 +51,17 @@ export default function ArtistDashboardPage() {
   }, [db, user]);
 
   const { data: applications, loading: appsLoading } = useCollection(applicationsQuery);
+
+  // Features requests received
+  const featuresQuery = useMemo(() => {
+    if (!db || !user) return null;
+    return query(
+      collection(db, 'artists', user.uid, 'features'),
+      orderBy('createdAt', 'desc')
+    );
+  }, [db, user]);
+
+  const { data: featureRequests, loading: featuresLoading } = useCollection(featuresQuery);
 
   useEffect(() => {
     if (!userLoading && !user) {
@@ -80,7 +94,7 @@ export default function ArtistDashboardPage() {
       <aside className="w-64 bg-primary text-white hidden md:flex flex-col shrink-0">
         <div className="p-6 border-b border-white/10 flex items-center gap-2">
           <Music className="h-6 w-6 text-accent" />
-          <span className="text-xl font-bold font-headline">GigConnect</span>
+          <span className="text-xl font-bold font-headline text-white">GigConnect</span>
         </div>
         <nav className="flex-1 p-4 space-y-2">
           <Button variant="ghost" className="w-full justify-start text-white hover:bg-white/10 bg-white/5">
@@ -91,6 +105,12 @@ export default function ArtistDashboardPage() {
             <Button variant="ghost" className="w-full justify-start text-white hover:bg-white/10">
               <Calendar className="mr-2 h-4 w-4" />
               Available Gigs
+            </Button>
+          </Link>
+          <Link href="/artist/features">
+            <Button variant="ghost" className="w-full justify-start text-white hover:bg-white/10">
+              <Sparkles className="mr-2 h-4 w-4" />
+              Find Features
             </Button>
           </Link>
           <Button variant="ghost" className="w-full justify-start text-white hover:bg-white/10" onClick={() => router.push('/artist/setup')}>
@@ -109,31 +129,21 @@ export default function ArtistDashboardPage() {
       <main className="flex-1 p-8 overflow-y-auto">
         <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
           <div>
-            <h1 className="text-3xl font-bold font-headline text-primary">Dashboard</h1>
-            <p className="text-muted-foreground">Manage your professional artist career</p>
+            <h1 className="text-3xl font-bold font-headline text-primary">Talent Hub</h1>
+            <p className="text-muted-foreground">Manage your performances and collaborations</p>
           </div>
           
           <div className="flex items-center gap-3">
             {isComplete ? (
               <Badge className="bg-green-500/10 text-green-600 hover:bg-green-500/20 border-green-200 px-3 py-1 gap-1">
                 <UserCheck className="h-3 w-3" />
-                Profile Complete
+                Verified Profile
               </Badge>
             ) : (
               <Badge variant="destructive" className="px-3 py-1 gap-1">
                 <AlertCircle className="h-3 w-3" />
-                Profile Incomplete
+                Setup Required
               </Badge>
-            )}
-            
-            {artistProfile?.whatsappNumber && (
-              <WhatsAppButton 
-                phoneNumber={artistProfile.whatsappNumber} 
-                variant="ghost" 
-                className="bg-white rounded-full border shadow-sm h-9 px-4 text-xs font-bold text-green-600 hover:text-green-700 hover:bg-green-50"
-              >
-                {artistProfile.whatsappNumber}
-              </WhatsAppButton>
             )}
           </div>
         </header>
@@ -159,112 +169,149 @@ export default function ArtistDashboardPage() {
               </div>
 
               <div className="space-y-4">
-                <div className="space-y-1.5">
-                  <p className="text-xs font-bold text-muted-foreground uppercase">Bio</p>
-                  <p className="text-sm line-clamp-3 italic text-muted-foreground">
-                    {artistProfile?.bio || "No bio added yet. Tell people about your music!"}
-                  </p>
-                </div>
-
-                <div className="space-y-1.5">
-                  <p className="text-xs font-bold text-muted-foreground uppercase">Genres</p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {artistProfile?.genres?.map((genre: string) => (
-                      <Badge key={genre} variant="secondary" className="text-[10px] font-bold">
-                        {genre}
-                      </Badge>
-                    )) || <span className="text-xs text-muted-foreground">None selected</span>}
-                  </div>
-                </div>
-
                 <div className="pt-4 border-t flex justify-between items-center">
                   <div className="text-center px-2">
-                    <p className="text-xs text-muted-foreground">Booking</p>
+                    <p className="text-xs text-muted-foreground">Gig Price</p>
                     <p className="font-bold text-primary">P{artistProfile?.bookingPrice || 0}</p>
                   </div>
                   <div className="text-center px-2 border-l border-r">
-                    <p className="text-xs text-muted-foreground">Features</p>
-                    <p className="font-bold text-primary">{artistProfile?.featurePrice ? `P${artistProfile.featurePrice}` : 'N/A'}</p>
+                    <p className="text-xs text-muted-foreground">Feature</p>
+                    <p className="font-bold text-accent">{artistProfile?.featurePrice ? `P${artistProfile.featurePrice}` : 'N/A'}</p>
                   </div>
                   <div className="text-center px-2">
                     <p className="text-xs text-muted-foreground">Rating</p>
-                    <p className="font-bold text-accent">5.0</p>
+                    <p className="font-bold text-green-500">5.0</p>
                   </div>
                 </div>
               </div>
             </CardContent>
             <CardFooter className="bg-muted/30 pt-4">
-              <Button variant="outline" size="sm" className="w-full" onClick={() => router.push('/artist/setup')}>
-                Edit Profile
+              <Button variant="outline" size="sm" className="w-full border-primary/20 text-primary" onClick={() => router.push('/artist/setup')}>
+                Update Bio & Portfolio
               </Button>
             </CardFooter>
           </Card>
 
           <div className="lg:col-span-2 space-y-8">
-            <Card className="bg-primary text-white border-none shadow-lg overflow-hidden relative">
-              <div className="absolute right-0 top-0 h-full w-1/3 opacity-10">
-                <Briefcase className="h-full w-full rotate-12" />
-              </div>
-              <CardHeader>
-                <CardTitle className="text-2xl font-headline">Find Your Next Gig</CardTitle>
-                <CardDescription className="text-white/80">
-                  Browse through hundreds of events looking for artists like you.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Link href="/artist/events">
-                  <Button size="lg" className="bg-accent hover:bg-accent/90 text-white font-bold gap-2">
-                    <Search className="h-5 w-5" />
-                    Browse Events
-                  </Button>
-                </Link>
-              </CardContent>
-            </Card>
+            <div className="grid md:grid-cols-2 gap-4">
+              <Card className="bg-primary text-white border-none shadow-lg overflow-hidden relative group">
+                <div className="absolute right-0 top-0 h-full w-1/3 opacity-10 group-hover:scale-110 transition-transform">
+                  <Briefcase className="h-full w-full rotate-12" />
+                </div>
+                <CardHeader>
+                  <CardTitle className="text-xl font-headline">Gig Marketplace</CardTitle>
+                  <CardDescription className="text-white/80">
+                    Apply for live events
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Link href="/artist/events">
+                    <Button size="sm" className="bg-accent hover:bg-accent/90 text-white font-bold gap-2 shadow-sm">
+                      <Search className="h-4 w-4" />
+                      Browse Gigs
+                    </Button>
+                  </Link>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-accent text-white border-none shadow-lg overflow-hidden relative group">
+                <div className="absolute right-0 top-0 h-full w-1/3 opacity-10 group-hover:scale-110 transition-transform">
+                  <Sparkles className="h-full w-full -rotate-12" />
+                </div>
+                <CardHeader>
+                  <CardTitle className="text-xl font-headline">Features</CardTitle>
+                  <CardDescription className="text-white/80">
+                    Collaborate with others
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Link href="/artist/features">
+                    <Button size="sm" className="bg-primary hover:bg-primary/90 text-white font-bold gap-2 shadow-sm">
+                      <Users className="h-4 w-4" />
+                      Find Collabs
+                    </Button>
+                  </Link>
+                </CardContent>
+              </Card>
+            </div>
 
             <section className="space-y-4">
-              <div className="flex items-center justify-between">
-                <h3 className="text-xl font-bold font-headline flex items-center gap-2">
-                  <Briefcase className="h-5 w-5 text-accent" />
-                  My Applications
-                </h3>
-              </div>
-              
+              <h3 className="text-xl font-bold font-headline flex items-center gap-2 text-primary">
+                <Briefcase className="h-5 w-5 text-accent" />
+                Gig Status
+              </h3>
               <div className="grid gap-4">
                 {appsLoading ? (
-                  <div className="h-24 flex items-center justify-center">
+                  <div className="h-24 flex items-center justify-center bg-white rounded-xl">
                     <Loader2 className="h-6 w-6 animate-spin text-primary" />
                   </div>
                 ) : applications && applications.length > 0 ? (
-                  applications.map((app: any) => (
+                  applications.slice(0, 3).map((app: any) => (
                     <Card key={app.id} className="border-none shadow-sm hover:shadow-md transition-shadow">
                       <CardContent className="p-4 flex items-center justify-between">
                         <div className="flex items-center gap-4">
-                          <div className="h-12 w-12 rounded-lg bg-secondary flex items-center justify-center">
-                            <Music className="h-6 w-6 text-primary" />
+                          <div className="h-10 w-10 rounded-lg bg-secondary flex items-center justify-center text-primary font-bold">
+                            P{app.price}
                           </div>
                           <div>
-                            <h4 className="font-bold text-sm">Application for Event</h4>
-                            <p className="text-xs text-muted-foreground">Ref: {app.eventId}</p>
+                            <h4 className="font-bold text-sm">Event Booking</h4>
+                            <p className="text-[10px] text-muted-foreground">{new Date(app.createdAt?.seconds * 1000).toLocaleDateString()}</p>
                           </div>
                         </div>
-                        <div className="text-right">
-                          <Badge variant="outline" className="mb-1">{app.status}</Badge>
-                          <p className="text-[10px] text-muted-foreground flex items-center gap-1 justify-end">
-                            Details <ExternalLink className="h-2 w-2" />
-                          </p>
+                        <Badge variant={app.status === 'Accepted' ? 'default' : 'secondary'} className="text-[10px]">
+                          {app.status}
+                        </Badge>
+                      </CardContent>
+                    </Card>
+                  ))
+                ) : (
+                  <p className="text-sm text-muted-foreground italic text-center py-4 bg-white rounded-xl border border-dashed">No active applications.</p>
+                )}
+              </div>
+            </section>
+
+            <section className="space-y-4">
+              <h3 className="text-xl font-bold font-headline flex items-center gap-2 text-primary">
+                <Sparkles className="h-5 w-5 text-accent" />
+                Collaboration Requests
+              </h3>
+              <div className="grid gap-4">
+                {featuresLoading ? (
+                  <div className="h-24 flex items-center justify-center bg-white rounded-xl">
+                    <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                  </div>
+                ) : featureRequests && featureRequests.length > 0 ? (
+                  featureRequests.map((req: any) => (
+                    <Card key={req.id} className="border-none shadow-sm hover:shadow-md transition-shadow">
+                      <CardContent className="p-4 flex items-center justify-between">
+                        <div className="flex items-center gap-4">
+                          <Avatar className="h-10 w-10 border">
+                            <AvatarFallback className="bg-secondary text-primary font-bold text-xs">
+                              {req.senderName?.substring(0, 2).toUpperCase()}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <h4 className="font-bold text-sm">{req.senderName}</h4>
+                            <p className="text-[10px] text-muted-foreground">Requested a Feature</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Badge className="bg-accent/10 text-accent border-none text-[10px]">{req.status}</Badge>
+                          {req.senderWhatsapp && (
+                            <WhatsAppButton 
+                              phoneNumber={req.senderWhatsapp} 
+                              iconOnly 
+                              size="sm"
+                              variant="ghost"
+                              className="h-8 w-8 text-green-500"
+                            />
+                          )}
                         </div>
                       </CardContent>
                     </Card>
                   ))
                 ) : (
-                  <Card className="border-dashed border-2 bg-transparent">
-                    <CardContent className="p-8 text-center text-muted-foreground">
-                      <p>You haven't applied for any gigs yet.</p>
-                      <Link href="/artist/events">
-                        <Button variant="link" className="text-accent font-bold">Find gigs now</Button>
-                      </Link>
-                    </CardContent>
-                  </Card>
+                  <p className="text-sm text-muted-foreground italic text-center py-4 bg-white rounded-xl border border-dashed">No feature requests received.</p>
                 )}
               </div>
             </section>
