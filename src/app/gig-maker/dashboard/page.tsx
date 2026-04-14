@@ -3,8 +3,9 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useUser, useFirestore, useDoc, useCollection } from '@/firebase';
+import { useUser, useFirestore, useDoc, useCollection, useAuth } from '@/firebase';
 import { doc, collection, query, where, deleteDoc, writeBatch, getDocs } from 'firebase/firestore';
+import { sendEmailVerification } from 'firebase/auth';
 import { 
   Loader2, 
   LayoutDashboard, 
@@ -23,7 +24,8 @@ import {
   AlertCircle,
   Edit,
   Trash2,
-  Eye
+  Eye,
+  MailWarning
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -45,11 +47,13 @@ import {
 export default function GigMakerDashboardPage() {
   const { user, loading: userLoading } = useUser();
   const db = useFirestore();
+  const auth = useAuth();
   const router = useRouter();
   const { toast } = useToast();
 
   const [eventToDelete, setEventToDelete] = useState<{ id: string, title: string } | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isResendingEmail, setIsResendingEmail] = useState(false);
 
   const gigMakerDocRef = useMemo(() => {
     if (!db || !user) return null;
@@ -77,7 +81,6 @@ export default function GigMakerDashboardPage() {
     });
   }, [rawEvents]);
 
-  // Cleanup logic for old events
   useEffect(() => {
     if (!events || events.length === 0 || !db) return;
 
@@ -89,13 +92,11 @@ export default function GigMakerDashboardPage() {
       for (const event of events) {
         if (!event.date) continue;
         const eventDate = new Date(event.date);
-        // If the event finished more than 2 days ago
         if (now.getTime() - eventDate.getTime() > twoDaysInMs) {
           try {
             const docId = event.id || event.eventId;
             if (!docId) continue;
 
-            // Delete event applications first
             const appsRef = collection(db, 'events', docId, 'applications');
             const appsSnap = await getDocs(appsRef);
             if (!appsSnap.empty) {
@@ -104,7 +105,6 @@ export default function GigMakerDashboardPage() {
               await batch.commit();
             }
             
-            // Delete the event
             await deleteDoc(doc(db, 'events', docId));
             deletedCount++;
           } catch (e) {
@@ -116,7 +116,7 @@ export default function GigMakerDashboardPage() {
       if (deletedCount > 0) {
         toast({
           title: "Cleanup Complete",
-          description: `Removed ${deletedCount} concluded events and their applications.`,
+          description: `Removed ${deletedCount} concluded events.`,
         });
       }
     };
@@ -131,7 +131,6 @@ export default function GigMakerDashboardPage() {
     const eventId = eventToDelete.id;
 
     try {
-      // 1. Delete all applications for this event
       const appsRef = collection(db, 'events', eventId, 'applications');
       const appsSnap = await getDocs(appsRef);
       
@@ -141,7 +140,6 @@ export default function GigMakerDashboardPage() {
         await batch.commit();
       }
 
-      // 2. Delete the event itself
       await deleteDoc(doc(db, 'events', eventId));
       
       toast({ 
@@ -160,6 +158,19 @@ export default function GigMakerDashboardPage() {
     }
   };
 
+  const handleResendVerification = async () => {
+    if (!user) return;
+    setIsResendingEmail(true);
+    try {
+      await sendEmailVerification(user);
+      toast({ title: "Verification Sent", description: "Check your inbox for the new link." });
+    } catch (error: any) {
+      toast({ variant: "destructive", title: "Error", description: error.message });
+    } finally {
+      setIsResendingEmail(false);
+    }
+  };
+
   if (userLoading || profileLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-secondary/10">
@@ -171,9 +182,10 @@ export default function GigMakerDashboardPage() {
     );
   }
 
+  const isEmailVerified = user?.emailVerified || false;
+
   return (
     <div className="min-h-screen bg-secondary/10 flex">
-      {/* Sidebar */}
       <aside className="w-64 bg-primary text-white hidden md:flex flex-col shrink-0">
         <div className="p-6 border-b border-white/10 flex items-center gap-2">
           <Building2 className="h-6 w-6 text-accent" />
@@ -196,7 +208,7 @@ export default function GigMakerDashboardPage() {
           </Button>
         </nav>
         <div className="p-4 border-t border-white/10">
-           <Button variant="ghost" className="w-full justify-start text-white hover:bg-white/10" onClick={() => router.push('/login')}>
+           <Button variant="ghost" className="w-full justify-start text-white hover:bg-white/10" onClick={() => auth.signOut()}>
             <LogOut className="mr-2 h-4 w-4" />
             Logout
           </Button>
@@ -204,6 +216,20 @@ export default function GigMakerDashboardPage() {
       </aside>
 
       <main className="flex-1 p-8 overflow-y-auto">
+        {!isEmailVerified && (
+          <Alert variant="destructive" className="mb-6 bg-red-50 border-red-200 text-red-800">
+            <MailWarning className="h-4 w-4 text-red-600" />
+            <AlertTitle className="font-bold">Email Not Verified</AlertTitle>
+            <AlertDescription className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <p className="text-sm">Please verify your email address to ensure full account access and security.</p>
+              <Button size="sm" variant="outline" className="shrink-0 border-red-300 text-red-800 hover:bg-red-100" onClick={handleResendVerification} disabled={isResendingEmail}>
+                {isResendingEmail ? <Loader2 className="h-3 w-3 animate-spin mr-2" /> : null}
+                Resend Verification
+              </Button>
+            </AlertDescription>
+          </Alert>
+        )}
+
         <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
           <div>
             <h1 className="text-3xl font-bold font-headline text-primary">Business Console</h1>
@@ -231,7 +257,7 @@ export default function GigMakerDashboardPage() {
             <AlertCircle className="h-4 w-4" />
             <AlertTitle>Database Error</AlertTitle>
             <AlertDescription>
-              Could not load your events. This might be due to missing database permissions.
+              Could not load your events.
             </AlertDescription>
           </Alert>
         )}
@@ -364,7 +390,6 @@ export default function GigMakerDashboardPage() {
         </section>
       </main>
 
-      {/* Delete Confirmation Dialog */}
       <AlertDialog open={!!eventToDelete} onOpenChange={(open) => !open && setEventToDelete(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>

@@ -4,7 +4,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { createUserWithEmailAndPassword, sendEmailVerification } from 'firebase/auth';
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { useAuth, useFirestore } from '@/firebase';
 import { Button } from '@/components/ui/button';
@@ -12,7 +12,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Briefcase, ArrowLeft, Loader2 } from 'lucide-react';
+import { Briefcase, ArrowLeft, Loader2, Mail, CheckCircle2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 export default function RegisterPage() {
@@ -22,6 +22,7 @@ export default function RegisterPage() {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [loading, setLoading] = useState(false);
+  const [verificationSent, setVerificationSent] = useState(false);
   
   const auth = useAuth();
   const db = useFirestore();
@@ -37,6 +38,9 @@ export default function RegisterPage() {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
+      // Send verification email
+      await sendEmailVerification(user);
+
       const userRef = doc(db, 'users', user.uid);
       await setDoc(userRef, {
         userId: user.uid,
@@ -47,14 +51,11 @@ export default function RegisterPage() {
         createdAt: serverTimestamp(),
       });
 
+      setVerificationSent(true);
       toast({
-        title: "Success!",
-        description: "Your account has been created.",
+        title: "Account Created!",
+        description: "A verification email has been sent to your inbox.",
       });
-
-      // Redirect DJs to the same talent setup as artists
-      const setupPath = role === 'gig-maker' ? '/gig-maker/setup' : '/artist/setup';
-      router.push(setupPath);
     } catch (error: any) {
       toast({
         variant: "destructive",
@@ -65,6 +66,41 @@ export default function RegisterPage() {
       setLoading(false);
     }
   };
+
+  if (verificationSent) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-secondary/20 p-4">
+        <Card className="max-w-md w-full border-none shadow-xl text-center py-8">
+          <CardHeader>
+            <div className="flex justify-center mb-4">
+              <div className="bg-green-100 p-4 rounded-full">
+                <Mail className="h-12 w-12 text-green-600" />
+              </div>
+            </div>
+            <CardTitle className="text-2xl font-headline">Verify Your Email</CardTitle>
+            <CardDescription>
+              We've sent a verification link to <span className="font-bold text-foreground">{email}</span>.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Please check your inbox (and spam folder) and click the link to activate your account.
+            </p>
+          </CardContent>
+          <CardFooter className="flex flex-col gap-3">
+            <Link href="/login" className="w-full">
+              <Button className="w-full bg-primary h-11">
+                Go to Login
+              </Button>
+            </Link>
+            <Button variant="ghost" className="text-xs" onClick={() => setVerificationSent(false)}>
+              Back to registration
+            </Button>
+          </CardFooter>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col bg-secondary/20">

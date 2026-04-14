@@ -3,8 +3,9 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useUser, useFirestore, useDoc, useCollection } from '@/firebase';
-import { doc, collectionGroup, query, where, orderBy, collection, updateDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
+import { useUser, useFirestore, useDoc, useCollection, useAuth } from '@/firebase';
+import { doc, collectionGroup, query, where, collection, updateDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
+import { sendEmailVerification } from 'firebase/auth';
 import { 
   Loader2, 
   LayoutDashboard, 
@@ -23,7 +24,8 @@ import {
   CheckCircle2,
   XCircle,
   Trash2,
-  Archive
+  Archive,
+  MailWarning
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
@@ -42,14 +44,17 @@ import {
   AlertDialogHeader, 
   AlertDialogTitle 
 } from '@/components/ui/alert-dialog';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 export default function ArtistDashboardPage() {
   const { user, loading: userLoading } = useUser();
   const db = useFirestore();
+  const auth = useAuth();
   const router = useRouter();
   const { toast } = useToast();
 
   const [requestToDelete, setRequestToDelete] = useState<string | null>(null);
+  const [isResendingEmail, setIsResendingEmail] = useState(false);
 
   const artistDocRef = useMemo(() => {
     if (!db || !user) return null;
@@ -58,7 +63,6 @@ export default function ArtistDashboardPage() {
 
   const { data: artistProfile, loading: profileLoading } = useDoc(artistDocRef);
 
-  // Gigs applications
   const applicationsQuery = useMemo(() => {
     if (!db || !user) return null;
     return query(
@@ -69,7 +73,6 @@ export default function ArtistDashboardPage() {
 
   const { data: rawApps, loading: appsLoading } = useCollection(applicationsQuery);
 
-  // Features requests received
   const featuresQuery = useMemo(() => {
     if (!db || !user) return null;
     return query(
@@ -79,13 +82,11 @@ export default function ArtistDashboardPage() {
 
   const { data: rawFeatures, loading: featuresLoading } = useCollection(featuresQuery);
 
-  // Memory sort applications
   const applications = useMemo(() => {
     if (!rawApps) return [];
     return [...rawApps].sort((a: any, b: any) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
   }, [rawApps]);
 
-  // Memory sort feature requests
   const featureRequests = useMemo(() => {
     if (!rawFeatures) return [];
     return [...rawFeatures].sort((a: any, b: any) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
@@ -135,6 +136,19 @@ export default function ArtistDashboardPage() {
     }
   };
 
+  const handleResendVerification = async () => {
+    if (!user) return;
+    setIsResendingEmail(true);
+    try {
+      await sendEmailVerification(user);
+      toast({ title: "Verification Sent", description: "Check your inbox for the new link." });
+    } catch (error: any) {
+      toast({ variant: "destructive", title: "Error", description: error.message });
+    } finally {
+      setIsResendingEmail(false);
+    }
+  };
+
   if (userLoading || profileLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-secondary/10">
@@ -147,6 +161,7 @@ export default function ArtistDashboardPage() {
   }
 
   const isComplete = artistProfile?.profileComplete || false;
+  const isEmailVerified = user?.emailVerified || false;
 
   return (
     <div className="min-h-screen bg-secondary/10 flex">
@@ -178,7 +193,7 @@ export default function ArtistDashboardPage() {
           </Button>
         </nav>
         <div className="p-4 border-t border-white/10">
-           <Button variant="ghost" className="w-full justify-start text-white hover:bg-white/10" onClick={() => router.push('/login')}>
+           <Button variant="ghost" className="w-full justify-start text-white hover:bg-white/10" onClick={() => auth.signOut()}>
             <LogOut className="mr-2 h-4 w-4" />
             Logout
           </Button>
@@ -186,6 +201,20 @@ export default function ArtistDashboardPage() {
       </aside>
 
       <main className="flex-1 p-8 overflow-y-auto">
+        {!isEmailVerified && (
+          <Alert variant="destructive" className="mb-6 bg-red-50 border-red-200 text-red-800">
+            <MailWarning className="h-4 w-4 text-red-600" />
+            <AlertTitle className="font-bold">Email Not Verified</AlertTitle>
+            <AlertDescription className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <p className="text-sm">Please verify your email address to ensure full account access and security.</p>
+              <Button size="sm" variant="outline" className="shrink-0 border-red-300 text-red-800 hover:bg-red-100" onClick={handleResendVerification} disabled={isResendingEmail}>
+                {isResendingEmail ? <Loader2 className="h-3 w-3 animate-spin mr-2" /> : null}
+                Resend Verification
+              </Button>
+            </AlertDescription>
+          </Alert>
+        )}
+
         <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
           <div>
             <h1 className="text-3xl font-bold font-headline text-primary">Talent Hub</h1>
@@ -306,7 +335,7 @@ export default function ArtistDashboardPage() {
                   </div>
                 ) : applications && applications.length > 0 ? (
                   applications.slice(0, 5).map((app: any) => (
-                    <Card key={`${app.eventId}-${app.id}`} className="border-none shadow-sm hover:shadow-md transition-shadow">
+                    <Card key={`${app.eventId}-${app.artistId}`} className="border-none shadow-sm hover:shadow-md transition-shadow">
                       <CardContent className="p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                         <div className="flex items-center gap-4">
                           <div className="h-10 w-10 rounded-lg bg-secondary flex items-center justify-center text-primary font-bold">
