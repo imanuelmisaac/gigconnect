@@ -26,8 +26,8 @@ import { WhatsAppButton } from '@/components/whatsapp-button';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 const GENRES = [
-  "All Genres", "Amapiano", "Afrobeats", "Afropop", "Pop", "Rock", "Hip Hop", "Jazz", "Classical", 
-  "Electronic", "R&B", "Country", "Reggae", "Folk"
+  "All Genres", "Kwaito", "Kwasa", "Amapiano", "Afrobeats", "Afropop", "Pop", "Rock", "Hip Hop", "Jazz", "Classical", 
+  "Electronic", "R&B", "Country", "Reggae", "Folk", "Other"
 ];
 
 const PRICE_RANGES = [

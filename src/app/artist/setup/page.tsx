@@ -16,8 +16,8 @@ import { Briefcase, Upload, Music, Video, User, Check, Loader2, AlertCircle } fr
 import { useToast } from '@/hooks/use-toast';
 
 const GENRES = [
-  "Amapiano", "Afrobeats", "Afropop", "Pop", "Rock", "Hip Hop", "Jazz", "Classical", 
-  "Electronic", "R&B", "Country", "Reggae", "Folk"
+  "Kwaito", "Kwasa", "Amapiano", "Afrobeats", "Afropop", "Pop", "Rock", "Hip Hop", "Jazz", "Classical", 
+  "Electronic", "R&B", "Country", "Reggae", "Folk", "Other"
 ];
 
 export default function ArtistSetupPage() {
@@ -270,7 +270,7 @@ export default function ArtistSetupPage() {
                     Genres (Select at least one)
                     {formData.genres.length === 0 && <span className="text-destructive text-xs font-bold">* Required</span>}
                   </Label>
-                  <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                     {GENRES.map(genre => (
                       <div key={genre} className="flex items-center space-x-2 bg-background p-2 rounded-md border border-input hover:border-primary transition-colors cursor-pointer">
                         <Checkbox 
@@ -278,7 +278,7 @@ export default function ArtistSetupPage() {
                           checked={formData.genres.includes(genre)} 
                           onCheckedChange={() => handleGenreChange(genre)} 
                         />
-                        <Label htmlFor={`genre-${genre}`} className="cursor-pointer font-medium">{genre}</Label>
+                        <Label htmlFor={`genre-${genre}`} className="cursor-pointer font-medium text-xs">{genre}</Label>
                       </div>
                     ))}
                   </div>

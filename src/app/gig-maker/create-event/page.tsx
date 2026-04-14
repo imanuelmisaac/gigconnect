@@ -17,8 +17,8 @@ import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
 
 const GENRES = [
-  "Amapiano", "Afrobeats", "Afropop", "Pop", "Rock", "Hip Hop", "Jazz", "Classical", 
-  "Electronic", "R&B", "Country", "Reggae", "Folk"
+  "Kwaito", "Kwasa", "Amapiano", "Afrobeats", "Afropop", "Pop", "Rock", "Hip Hop", "Jazz", "Classical", 
+  "Electronic", "R&B", "Country", "Reggae", "Folk", "Other"
 ];
 
 export default function CreateEventPage() {
@@ -197,7 +197,7 @@ export default function CreateEventPage() {
 
                 <div className="space-y-3">
                   <Label>Required Genres (Amapiano, Afrobeats, etc.)</Label>
-                  <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                     {GENRES.map(genre => (
                       <div key={genre} className="flex items-center space-x-2 bg-background p-2 rounded-md border border-input hover:border-primary transition-colors cursor-pointer">
                         <Checkbox 
