@@ -4,16 +4,17 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { signInWithEmailAndPassword, sendPasswordResetEmail, signOut } from 'firebase/auth';
+import { signInWithEmailAndPassword, sendPasswordResetEmail, signOut, sendEmailVerification } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import { useAuth, useFirestore } from '@/firebase';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Briefcase, ArrowLeft, Loader2, KeyRound, MailWarning } from 'lucide-react';
+import { Briefcase, ArrowLeft, Loader2, KeyRound, Mail, RefreshCw } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -22,6 +23,8 @@ export default function LoginPage() {
   const [resetEmail, setResetEmail] = useState('');
   const [resetLoading, setResetLoading] = useState(false);
   const [isResetDialogOpen, setIsResetDialogOpen] = useState(false);
+  const [isUnverified, setIsUnverified] = useState(false);
+  const [resending, setResending] = useState(false);
   
   const auth = useAuth();
   const db = useFirestore();
@@ -33,6 +36,8 @@ export default function LoginPage() {
     if (loading) return;
 
     setLoading(true);
+    setIsUnverified(false);
+    
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
@@ -40,11 +45,12 @@ export default function LoginPage() {
       if (!user.emailVerified) {
         toast({
           variant: "destructive",
-          title: "Email Not Verified",
-          description: "Please check your inbox and verify your email before logging in.",
+          title: "Account Not Verified",
+          description: "Please verify your email address to access your dashboard.",
         });
-        await signOut(auth);
+        setIsUnverified(true);
         setLoading(false);
+        // We stay signed in briefly to allow the "Resend" button to work
         return;
       }
 
@@ -83,6 +89,28 @@ export default function LoginPage() {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleResendVerification = async () => {
+    if (!auth.currentUser) return;
+    setResending(true);
+    try {
+      await sendEmailVerification(auth.currentUser);
+      toast({
+        title: "Verification Sent",
+        description: "A new activation link has been sent to your email.",
+      });
+      await signOut(auth);
+      setIsUnverified(false);
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message || "Failed to resend verification email.",
+      });
+    } finally {
+      setResending(false);
     }
   };
 
@@ -131,6 +159,26 @@ export default function LoginPage() {
             <h1 className="text-3xl font-bold tracking-tight text-primary font-headline">Welcome Back</h1>
             <p className="text-muted-foreground">Enter your credentials to access your account</p>
           </div>
+
+          {isUnverified && (
+            <Alert variant="destructive" className="bg-destructive/10 border-destructive/20">
+              <Mail className="h-4 w-4" />
+              <AlertTitle>Verification Required</AlertTitle>
+              <AlertDescription className="space-y-3">
+                <p>Your email is not verified. Please check your inbox for the activation link.</p>
+                <Button 
+                  size="sm" 
+                  variant="outline" 
+                  className="w-full font-bold gap-2" 
+                  onClick={handleResendVerification}
+                  disabled={resending}
+                >
+                  {resending ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+                  Resend Verification Email
+                </Button>
+              </AlertDescription>
+            </Alert>
+          )}
           
           <Card className="border-none shadow-xl">
             <form onSubmit={handleSubmit}>

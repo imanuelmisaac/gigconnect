@@ -5,7 +5,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUser, useFirestore, useDoc, useCollection, useAuth } from '@/firebase';
 import { doc, collectionGroup, query, where, collection, updateDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
-import { sendEmailVerification, signOut } from 'firebase/auth';
+import { signOut } from 'firebase/auth';
 import { 
   Loader2, 
   LayoutDashboard, 
@@ -15,7 +15,6 @@ import {
   LogOut, 
   UserCheck, 
   AlertCircle,
-  ExternalLink,
   MapPin,
   Briefcase,
   Search,
@@ -24,8 +23,7 @@ import {
   CheckCircle2,
   XCircle,
   Trash2,
-  Archive,
-  MailWarning
+  Archive
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
@@ -44,7 +42,6 @@ import {
   AlertDialogHeader, 
   AlertDialogTitle 
 } from '@/components/ui/alert-dialog';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 export default function ArtistDashboardPage() {
   const { user, loading: userLoading } = useUser();
@@ -54,7 +51,6 @@ export default function ArtistDashboardPage() {
   const { toast } = useToast();
 
   const [requestToDelete, setRequestToDelete] = useState<string | null>(null);
-  const [isResendingEmail, setIsResendingEmail] = useState(false);
 
   const artistDocRef = useMemo(() => {
     if (!db || !user) return null;
@@ -104,7 +100,7 @@ export default function ArtistDashboardPage() {
           toast({
             variant: "destructive",
             title: "Verification Required",
-            description: "You must verify your email before accessing the dashboard.",
+            description: "Please verify your email address to access your dashboard.",
           });
           router.push('/login');
         });

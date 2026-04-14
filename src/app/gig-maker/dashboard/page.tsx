@@ -5,7 +5,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUser, useFirestore, useDoc, useCollection, useAuth } from '@/firebase';
 import { doc, collection, query, where, deleteDoc, writeBatch, getDocs } from 'firebase/firestore';
-import { sendEmailVerification, signOut } from 'firebase/auth';
+import { signOut } from 'firebase/auth';
 import { 
   Loader2, 
   LayoutDashboard, 
@@ -19,16 +19,13 @@ import {
   CheckCircle,
   Clock,
   MapPin,
-  ChevronRight,
   Search,
   AlertCircle,
   Edit,
-  Trash2,
-  Eye,
-  MailWarning
+  Trash2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
@@ -92,7 +89,7 @@ export default function GigMakerDashboardPage() {
           toast({
             variant: "destructive",
             title: "Verification Required",
-            description: "You must verify your email before accessing the console.",
+            description: "Please verify your email address to access your console.",
           });
           router.push('/login');
         });
