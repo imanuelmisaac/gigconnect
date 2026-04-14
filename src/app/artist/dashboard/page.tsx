@@ -5,7 +5,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUser, useFirestore, useDoc, useCollection, useAuth } from '@/firebase';
 import { doc, collectionGroup, query, where, collection, updateDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
-import { sendEmailVerification } from 'firebase/auth';
+import { sendEmailVerification, signOut } from 'firebase/auth';
 import { 
   Loader2, 
   LayoutDashboard, 
@@ -93,17 +93,31 @@ export default function ArtistDashboardPage() {
   }, [rawFeatures]);
 
   useEffect(() => {
-    if (!userLoading && !user) {
-      router.push('/login');
-      return;
-    }
+    if (!userLoading) {
+      if (!user) {
+        router.push('/login');
+        return;
+      }
+      
+      if (!user.emailVerified) {
+        signOut(auth).then(() => {
+          toast({
+            variant: "destructive",
+            title: "Verification Required",
+            description: "You must verify your email before accessing the dashboard.",
+          });
+          router.push('/login');
+        });
+        return;
+      }
 
-    if (!profileLoading && artistProfile) {
-      if (artistProfile.profileComplete === false) {
-        router.push('/artist/setup');
+      if (!profileLoading && artistProfile) {
+        if (artistProfile.profileComplete === false) {
+          router.push('/artist/setup');
+        }
       }
     }
-  }, [user, userLoading, artistProfile, profileLoading, router]);
+  }, [user, userLoading, artistProfile, profileLoading, router, auth, toast]);
 
   const handleUpdateFeatureStatus = async (reqId: string, status: 'Accepted' | 'Rejected') => {
     if (!db || !user) return;
@@ -136,19 +150,6 @@ export default function ArtistDashboardPage() {
     }
   };
 
-  const handleResendVerification = async () => {
-    if (!user) return;
-    setIsResendingEmail(true);
-    try {
-      await sendEmailVerification(user);
-      toast({ title: "Verification Sent", description: "Check your inbox for the new link." });
-    } catch (error: any) {
-      toast({ variant: "destructive", title: "Error", description: error.message });
-    } finally {
-      setIsResendingEmail(false);
-    }
-  };
-
   if (userLoading || profileLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-secondary/10">
@@ -161,7 +162,6 @@ export default function ArtistDashboardPage() {
   }
 
   const isComplete = artistProfile?.profileComplete || false;
-  const isEmailVerified = user?.emailVerified || false;
 
   return (
     <div className="min-h-screen bg-secondary/10 flex">
@@ -201,20 +201,6 @@ export default function ArtistDashboardPage() {
       </aside>
 
       <main className="flex-1 p-8 overflow-y-auto">
-        {!isEmailVerified && (
-          <Alert variant="destructive" className="mb-6 bg-red-50 border-red-200 text-red-800">
-            <MailWarning className="h-4 w-4 text-red-600" />
-            <AlertTitle className="font-bold">Email Not Verified</AlertTitle>
-            <AlertDescription className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-              <p className="text-sm">Please verify your email address to ensure full account access and security.</p>
-              <Button size="sm" variant="outline" className="shrink-0 border-red-300 text-red-800 hover:bg-red-100" onClick={handleResendVerification} disabled={isResendingEmail}>
-                {isResendingEmail ? <Loader2 className="h-3 w-3 animate-spin mr-2" /> : null}
-                Resend Verification
-              </Button>
-            </AlertDescription>
-          </Alert>
-        )}
-
         <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
           <div>
             <h1 className="text-3xl font-bold font-headline text-primary">Talent Hub</h1>
