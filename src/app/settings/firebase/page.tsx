@@ -10,14 +10,13 @@ import { Button } from '@/components/ui/button';
 export default function FirebaseSettingsPage() {
   const [copied, setCopied] = useState(false);
 
-  const envContent = `NEXT_PUBLIC_FIREBASE_API_KEY=AIzaSyBlm8OFm5ZU0ocD1DRO5hTamv5QVS-xk6g
-NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=kei-blackboard.firebaseapp.com
-NEXT_PUBLIC_FIREBASE_DATABASE_URL=https://kei-blackboard-default-rtdb.firebaseio.com
-NEXT_PUBLIC_FIREBASE_PROJECT_ID=kei-blackboard
-NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=kei-blackboard.firebasestorage.app
-NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=394060604555
-NEXT_PUBLIC_FIREBASE_APP_ID=1:394060604555:web:5bad509b507a4be82c608e
-NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID=G-LBEBM1SZ7F`;
+  const envContent = `NEXT_PUBLIC_FIREBASE_API_KEY=AIzaSyAKSnpljCHl0weO0Y7PfbvZPArhjSfVXlk
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=gigconnect-ac1f9.firebaseapp.com
+NEXT_PUBLIC_FIREBASE_PROJECT_ID=gigconnect-ac1f9
+NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=gigconnect-ac1f9.firebasestorage.app
+NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=146349558627
+NEXT_PUBLIC_FIREBASE_APP_ID=1:146349558627:web:9a620aea99abe889b52156
+NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID=G-GFWVQ12FVZ`;
 
   const copyToClipboard = () => {
     navigator.clipboard.writeText(envContent);
