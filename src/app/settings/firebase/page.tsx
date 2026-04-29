@@ -3,9 +3,10 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Navbar } from '@/components/navbar';
 import { Badge } from '@/components/ui/badge';
-import { ShieldCheck, Info, Copy, Check } from 'lucide-react';
+import { ShieldCheck, Info, Copy, Check, AlertTriangle } from 'lucide-react';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 export default function FirebaseSettingsPage() {
   const [copied, setCopied] = useState(false);
@@ -36,6 +37,14 @@ NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID=G-GFWVQ12FVZ`;
         </div>
 
         <div className="grid gap-8">
+          <Alert variant="destructive" className="bg-red-50 border-red-200">
+            <AlertTriangle className="h-5 w-5" />
+            <AlertTitle className="font-bold">Important Step Required</AlertTitle>
+            <AlertDescription>
+              To fix the 400 error during registration, you <strong>must</strong> enable the "Email/Password" provider in the Firebase Console under <strong>Authentication > Sign-in method</strong> for project <code>gigconnect-ac1f9</code>.
+            </AlertDescription>
+          </Alert>
+
           <Card className="border-none shadow-md">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -50,8 +59,7 @@ NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID=G-GFWVQ12FVZ`;
               <div className="space-y-2">
                 <h3 className="font-bold text-primary">1. Environment Variables</h3>
                 <p className="text-sm text-muted-foreground">
-                  The application is configured to read Firebase credentials from environment variables. 
-                  Copy the snippet below into a file named <code className="bg-muted px-1 rounded">.env.local</code> in the root of your project.
+                  The application is configured to use the following credentials for <strong>GigConnect</strong>.
                 </p>
               </div>
 
