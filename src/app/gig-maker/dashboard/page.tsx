@@ -22,7 +22,8 @@ import {
   Search,
   AlertCircle,
   Edit,
-  Trash2
+  Trash2,
+  AlertTriangle
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -101,7 +102,7 @@ export default function GigMakerDashboardPage() {
     }
   }, [user, userLoading, router, auth, toast]);
 
-  // AUTO-CLEANUP LOGIC: Deletes events once the date has passed
+  // AUTO-CLEANUP LOGIC: Deletes events after listing expiry OR event date
   useEffect(() => {
     if (!events || events.length === 0 || !db || cleanupPerformed.current) return;
 
@@ -110,17 +111,26 @@ export default function GigMakerDashboardPage() {
       let deletedCount = 0;
 
       for (const event of events) {
-        if (!event.date) continue;
+        const docId = event.id || event.eventId;
+        if (!docId) continue;
 
-        const [year, month, day] = event.date.split('-').map(Number);
-        const eventExpiry = new Date(year, month - 1, day, 23, 59, 59);
+        let shouldDelete = false;
 
-        if (now > eventExpiry) {
-          const docId = event.id || event.eventId;
-          if (!docId) continue;
+        // Check Event Date Expiry
+        if (event.date) {
+          const [year, month, day] = event.date.split('-').map(Number);
+          const eventExpiry = new Date(year, month - 1, day, 23, 59, 59);
+          if (now > eventExpiry) shouldDelete = true;
+        }
 
+        // Check Listing Expiry (3-day rule)
+        if (event.listingExpiresAt) {
+          const listingExpiry = new Date(event.listingExpiresAt);
+          if (now > listingExpiry) shouldDelete = true;
+        }
+
+        if (shouldDelete) {
           try {
-            // 1. Delete all applications first (cascading delete)
             const appsRef = collection(db, 'events', docId, 'applications');
             const appsSnap = await getDocs(appsRef);
             if (!appsSnap.empty) {
@@ -129,7 +139,6 @@ export default function GigMakerDashboardPage() {
               await batch.commit();
             }
             
-            // 2. Delete the event itself
             const eventRef = doc(db, 'events', docId);
             await deleteDoc(eventRef);
             deletedCount++;
@@ -146,7 +155,7 @@ export default function GigMakerDashboardPage() {
       if (deletedCount > 0) {
         toast({
           title: "Dashboard Cleaned",
-          description: `Automatically removed ${deletedCount} concluded events and their applications.`,
+          description: `Removed ${deletedCount} concluded/expired events.`,
         });
       }
       cleanupPerformed.current = true;
@@ -176,7 +185,7 @@ export default function GigMakerDashboardPage() {
         .then(() => {
           toast({ 
             title: "Event Deleted", 
-            description: `"${eventToDelete.title}" and its applications have been removed.` 
+            description: `"${eventToDelete.title}" has been removed.` 
           });
           setEventToDelete(null);
         })
@@ -294,8 +303,8 @@ export default function GigMakerDashboardPage() {
                 <ClipboardList className="h-6 w-6" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Auto-Cleanup</p>
-                <p className="text-xs font-bold text-orange-600">Concluded Gigs Only</p>
+                <p className="text-sm text-muted-foreground">Expiry Rule</p>
+                <p className="text-xs font-bold text-orange-600">Auto-Delete @ 3 Days</p>
               </div>
             </CardContent>
           </Card>
@@ -305,8 +314,8 @@ export default function GigMakerDashboardPage() {
                 <CheckCircle className="h-6 w-6" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">System Status</p>
-                <p className="text-xs font-bold text-green-600">Online & Active</p>
+                <p className="text-sm text-muted-foreground">Listing Fee</p>
+                <p className="text-xs font-bold text-green-600">P25 Per Event</p>
               </div>
             </CardContent>
           </Card>
@@ -335,11 +344,21 @@ export default function GigMakerDashboardPage() {
                 <Card key={event.id} className="border-none shadow-sm hover:shadow-md transition-shadow group overflow-hidden">
                   <CardContent className="p-4 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
                     <div className="flex items-center gap-4">
-                      <div className="h-12 w-12 rounded-lg bg-secondary flex items-center justify-center">
+                      <div className="h-12 w-12 rounded-lg bg-secondary flex items-center justify-center relative">
                         <Calendar className="h-6 w-6 text-primary" />
+                        {event.paymentStatus === 'Incomplete' && (
+                          <div className="absolute -top-1 -right-1 bg-destructive text-white rounded-full p-0.5">
+                            <AlertTriangle className="h-3 w-3" />
+                          </div>
+                        )}
                       </div>
                       <div>
-                        <h4 className="font-bold text-sm">{event.title}</h4>
+                        <div className="flex items-center gap-2">
+                          <h4 className="font-bold text-sm">{event.title}</h4>
+                          <Badge variant={event.paymentStatus === 'Complete' ? 'secondary' : 'destructive'} className="text-[9px] py-0">
+                            {event.paymentStatus}
+                          </Badge>
+                        </div>
                         <div className="flex items-center text-[10px] text-muted-foreground gap-3">
                           <span className="flex items-center gap-0.5"><MapPin className="h-2 w-2" /> {event.location}</span>
                           <span className="flex items-center gap-0.5"><Clock className="h-2 w-2" /> {event.date}</span>
@@ -348,6 +367,10 @@ export default function GigMakerDashboardPage() {
                     </div>
                     
                     <div className="flex flex-wrap items-center gap-2">
+                      {event.paymentStatus === 'Incomplete' && (
+                        <p className="text-[10px] text-destructive font-bold animate-pulse">Payment Incomplete - Hidden from Artists</p>
+                      )}
+                      
                       <Badge variant={event.status === 'Open' ? 'default' : 'secondary'} className="text-[10px]">
                         {event.status}
                       </Badge>

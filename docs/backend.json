@@ -1,3 +1,4 @@
+
 {
   "entities": {
     "User": {
@@ -200,6 +201,20 @@
             "Completed"
           ]
         },
+        "paymentStatus": {
+          "type": "string",
+          "enum": [
+            "Pending",
+            "Complete",
+            "Incomplete"
+          ],
+          "description": "Optimistically complete on creation, but admin can mark as incomplete"
+        },
+        "listingExpiresAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Auto-calculated as 3 days after creation"
+        },
         "createdAt": {
           "type": "string",
           "format": "date-time"
@@ -215,7 +230,8 @@
         "genres",
         "minPrice",
         "maxPrice",
-        "experienceLevel"
+        "experienceLevel",
+        "paymentStatus"
       ]
     },
     "Application": {

@@ -54,16 +54,16 @@ export default function ArtistEventsPage() {
 
   const eventsQuery = useMemo(() => {
     if (!db) return null;
-    // Removed orderBy to avoid composite index requirement
+    // Only show Open status AND payment verified status
     return query(
       collection(db, 'events'),
-      where('status', '==', 'Open')
+      where('status', '==', 'Open'),
+      where('paymentStatus', '==', 'Complete')
     );
   }, [db]);
 
   const { data: rawEvents, loading: eventsLoading, error: eventsError } = useCollection(eventsQuery);
 
-  // Sort events in memory by date
   const events = useMemo(() => {
     if (!rawEvents) return [];
     return [...rawEvents].sort((a: any, b: any) => {
@@ -197,8 +197,7 @@ export default function ArtistEventsPage() {
             <AlertCircle className="h-4 w-4" />
             <AlertTitle>Database Error</AlertTitle>
             <AlertDescription>
-              Could not load events. This might be due to missing database permissions or indexes.
-              <p className="text-[10px] mt-2 opacity-70">{eventsError.message}</p>
+              Could not load events.
             </AlertDescription>
           </Alert>
         )}
