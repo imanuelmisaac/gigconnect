@@ -16,14 +16,20 @@ export function WhatsAppButton({
   children, 
   iconOnly = false,
   variant = "outline",
+  onClick,
   ...props 
 }: WhatsAppButtonProps) {
-  const handleClick = () => {
+  const handleClick = (e: React.MouseEvent<HTMLButtonElement>) => {
     // Sanitize phone number (remove any non-digit characters)
     const cleanPhone = phoneNumber.replace(/\D/g, '');
     const encodedMessage = encodeURIComponent(message);
     const url = `https://wa.me/${cleanPhone}${encodedMessage ? `?text=${encodedMessage}` : ''}`;
     window.open(url, '_blank', 'noopener,noreferrer');
+    
+    // Call external onClick if provided
+    if (onClick) {
+      onClick(e);
+    }
   };
 
   return (

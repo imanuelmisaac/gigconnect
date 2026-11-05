@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -31,6 +30,8 @@ export default function CreateEventPage() {
 
   const [loading, setLoading] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [hasSentScreenshot, setHasSentScreenshot] = useState(false);
+  
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -265,7 +266,10 @@ export default function CreateEventPage() {
         </form>
       </div>
 
-      <Dialog open={showPaymentModal} onOpenChange={setShowPaymentModal}>
+      <Dialog open={showPaymentModal} onOpenChange={(open) => {
+        setShowPaymentModal(open);
+        if (!open) setHasSentScreenshot(false);
+      }}>
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-primary">
@@ -317,9 +321,15 @@ export default function CreateEventPage() {
                   message={`Hi, I've just paid P25 for my event "${formData.title}". Here is the proof of payment.`}
                   className="w-full bg-green-600 hover:bg-green-700 text-white font-bold h-9"
                   size="sm"
+                  onClick={() => setHasSentScreenshot(true)}
                 >
                   Send Screenshot
                 </WhatsAppButton>
+                {hasSentScreenshot && (
+                  <p className="text-[10px] text-green-600 font-bold flex items-center gap-1 justify-center">
+                    <CheckCircle2 className="h-3 w-3" /> Screenshot sent initiated. You can now publish.
+                  </p>
+                )}
               </div>
             </div>
 
@@ -335,9 +345,13 @@ export default function CreateEventPage() {
             <Button variant="outline" onClick={() => setShowPaymentModal(false)} disabled={loading}>
               Cancel
             </Button>
-            <Button className="bg-primary flex-1" onClick={handleFinalPublish} disabled={loading}>
+            <Button 
+              className="bg-primary flex-1" 
+              onClick={handleFinalPublish} 
+              disabled={loading || !hasSentScreenshot}
+            >
               {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-              Publish Now
+              {hasSentScreenshot ? 'Publish Now' : 'Send Screenshot First'}
             </Button>
           </DialogFooter>
         </DialogContent>
