@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useState, useEffect, useMemo } from 'react';
@@ -110,23 +111,33 @@ export default function ArtistSetupPage() {
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>, key: keyof typeof files) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
-      if (file.size > 500 * 1024) {
+      
+      // Increased to 700KB for Firestore documents which have a 1MB limit
+      if (file.size > 700 * 1024) {
         toast({
           variant: "destructive",
           title: "File too large",
-          description: "Please upload an image smaller than 500KB.",
+          description: "Please upload an image smaller than 700KB. Try resizing your photo.",
         });
+        e.target.value = '';
         return;
       }
+      
       try {
         const base64 = await fileToBase64(file);
         setFiles(prev => ({ ...prev, [key]: base64 }));
+        toast({
+          title: "Photo Added",
+          description: "Your profile picture is ready.",
+        });
       } catch (err) {
         toast({
           variant: "destructive",
           title: "Error reading file",
           description: "Could not process the selected image.",
         });
+      } finally {
+        e.target.value = '';
       }
     }
   };
@@ -340,13 +351,34 @@ export default function ArtistSetupPage() {
               <CardContent className="grid md:grid-cols-1 gap-6 pt-6">
                 <div className="space-y-2">
                   <Label>Profile Picture</Label>
-                  <div className={`flex flex-col items-center justify-center border-2 border-dashed rounded-lg p-6 hover:bg-accent transition-colors ${!files.profilePic ? 'border-destructive/30' : 'border-primary/30'}`}>
-                    <Upload className="h-8 w-8 text-muted-foreground mb-2" />
-                    <Input type="file" className="hidden" id="profile-pic" accept="image/*" onChange={(e) => handleFileChange(e, 'profilePic')} />
-                    <Label htmlFor="profile-pic" className="cursor-pointer text-sm font-bold text-primary truncate max-w-full px-2">
-                      {files.profilePic ? 'Image Selected' : 'Choose Image'}
-                    </Label>
-                  </div>
+                  <Label 
+                    htmlFor="profile-pic" 
+                    className={`flex flex-col items-center justify-center border-2 border-dashed rounded-lg p-8 hover:bg-accent transition-all cursor-pointer text-center ${!files.profilePic ? 'border-destructive/30' : 'border-primary/50 bg-primary/5'}`}
+                  >
+                    <Upload className={`h-10 w-10 mb-2 transition-colors ${files.profilePic ? 'text-primary' : 'text-muted-foreground'}`} />
+                    <span className="text-sm font-bold text-primary">
+                      {files.profilePic ? 'Change Profile Photo' : 'Upload Profile Photo'}
+                    </span>
+                    <span className="text-[10px] text-muted-foreground mt-1">Maximum Size: 700KB (JPG, PNG)</span>
+                    
+                    <Input 
+                      type="file" 
+                      className="hidden" 
+                      id="profile-pic" 
+                      accept="image/*" 
+                      onChange={(e) => handleFileChange(e, 'profilePic')} 
+                    />
+                    
+                    {files.profilePic && (
+                      <div className="mt-4 relative h-32 w-32 rounded-full overflow-hidden border-4 border-white shadow-md">
+                        <img 
+                          src={files.profilePic} 
+                          alt="Profile Preview" 
+                          className="h-full w-full object-cover" 
+                        />
+                      </div>
+                    )}
+                  </Label>
                 </div>
               </CardContent>
             </Card>
