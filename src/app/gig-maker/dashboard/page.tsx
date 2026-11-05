@@ -40,6 +40,8 @@ import {
   AlertDialogHeader, 
   AlertDialogTitle
 } from '@/components/ui/alert-dialog';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
 
 export default function GigMakerDashboardPage() {
   const { user, loading: userLoading } = useUser();
@@ -110,16 +112,14 @@ export default function GigMakerDashboardPage() {
       for (const event of events) {
         if (!event.date) continue;
 
-        // event.date is in format YYYY-MM-DD
         const [year, month, day] = event.date.split('-').map(Number);
-        // Expiry is the very end of the event day (23:59:59)
         const eventExpiry = new Date(year, month - 1, day, 23, 59, 59);
 
         if (now > eventExpiry) {
-          try {
-            const docId = event.id || event.eventId;
-            if (!docId) continue;
+          const docId = event.id || event.eventId;
+          if (!docId) continue;
 
+          try {
             // 1. Delete all applications first (cascading delete)
             const appsRef = collection(db, 'events', docId, 'applications');
             const appsSnap = await getDocs(appsRef);
@@ -130,10 +130,15 @@ export default function GigMakerDashboardPage() {
             }
             
             // 2. Delete the event itself
-            await deleteDoc(doc(db, 'events', docId));
+            const eventRef = doc(db, 'events', docId);
+            await deleteDoc(eventRef);
             deletedCount++;
-          } catch (e) {
-            console.error("Cleanup failed for event:", event.id, e);
+          } catch (e: any) {
+            const permissionError = new FirestorePermissionError({
+              path: `/events/${docId}`,
+              operation: 'delete',
+            } satisfies SecurityRuleContext);
+            errorEmitter.emit('permission-error', permissionError);
           }
         }
       }
@@ -162,24 +167,36 @@ export default function GigMakerDashboardPage() {
       
       if (!appsSnap.empty) {
         const batch = writeBatch(db);
-        appsSnap.docs.forEach(doc => batch.delete(doc.ref));
+        appsSnap.docs.forEach(docSnap => batch.delete(docSnap.ref));
         await batch.commit();
       }
 
-      await deleteDoc(doc(db, 'events', eventId));
-      
-      toast({ 
-        title: "Event Deleted", 
-        description: `"${eventToDelete.title}" and its applications have been removed.` 
-      });
-      setEventToDelete(null);
+      const eventRef = doc(db, 'events', eventId);
+      deleteDoc(eventRef)
+        .then(() => {
+          toast({ 
+            title: "Event Deleted", 
+            description: `"${eventToDelete.title}" and its applications have been removed.` 
+          });
+          setEventToDelete(null);
+        })
+        .catch(async (serverError) => {
+          const permissionError = new FirestorePermissionError({
+            path: eventRef.path,
+            operation: 'delete',
+          } satisfies SecurityRuleContext);
+          errorEmitter.emit('permission-error', permissionError);
+        })
+        .finally(() => {
+          setIsDeleting(false);
+        });
+
     } catch (e: any) {
       toast({ 
         variant: "destructive", 
         title: "Error", 
         description: e.message || "Failed to delete event." 
       });
-    } finally {
       setIsDeleting(false);
     }
   };

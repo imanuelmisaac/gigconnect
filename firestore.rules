@@ -60,7 +60,10 @@ service cloud.firestore {
           isOwner(get(/databases/$(database)/documents/events/$(eventId)).data.gigMakerId)
         );
         
-        allow delete: if false;
+        allow delete: if isSignedIn() && (
+          isOwner(applicationId) || 
+          isOwner(get(/databases/$(database)/documents/events/$(eventId)).data.gigMakerId)
+        );
       }
     }
     
