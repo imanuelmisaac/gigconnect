@@ -10,7 +10,6 @@ service cloud.firestore {
     }
 
     // Helper: Is the user an admin?
-    // Updated with specific UID rJq93j6Mi5NuAPEPNDYpLtSgFfc2
     function isAdmin() {
       return isSignedIn() && (
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' || 
@@ -34,17 +33,29 @@ service cloud.firestore {
     }
 
     // Artists/DJs Collection
-    match /artists/{userId} {
+    match /artists/{artistId} {
       allow read: if isSignedIn();
-      allow write: if isSignedIn() && isOwner(userId);
+      allow write: if isSignedIn() && isOwner(artistId);
 
       // Feature Requests sub-collection
-      match /features/{requestId} {
-        allow read: if isSignedIn() && (isOwner(userId) || isOwner(requestId));
-        allow create: if isSignedIn() && isOwner(requestId);
-        allow update: if isSignedIn() && isOwner(userId); // Only the target can accept/reject
-        allow delete: if isSignedIn() && (isOwner(userId) || isOwner(requestId));
+      match /features/{senderId} {
+        // Read: Target artist or the sender
+        allow read: if isSignedIn() && (isOwner(artistId) || isOwner(senderId));
+        
+        // Create: Only the sender
+        allow create: if isSignedIn() && isOwner(senderId);
+        
+        // Update: Both (Target accepts/rejects, Sender might update message)
+        allow update: if isSignedIn() && (isOwner(artistId) || isOwner(senderId));
+        
+        // Delete: Both
+        allow delete: if isSignedIn() && (isOwner(artistId) || isOwner(senderId));
       }
+    }
+
+    // Allow collection group queries for features (needed for "Sent Requests" tab)
+    match /{path=**}/features/{senderId} {
+      allow read, list: if isSignedIn() && isOwner(senderId);
     }
 
     // Gig Makers Collection

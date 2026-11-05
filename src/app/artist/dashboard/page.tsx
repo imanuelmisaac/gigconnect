@@ -47,6 +47,8 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
 
 const SUBSCRIPTION_LIMITS = {
   free: { apps: 2, features: 3, label: "Free Tier" },
@@ -154,18 +156,25 @@ export default function ArtistDashboardPage() {
     if (!db || !user) return;
     const reqRef = doc(db, 'artists', user.uid, 'features', reqId);
     
-    try {
-      await updateDoc(reqRef, { 
-        status, 
-        updatedAt: serverTimestamp() 
+    const updateData = { 
+      status, 
+      updatedAt: serverTimestamp() 
+    };
+
+    updateDoc(reqRef, updateData)
+      .then(() => {
+        toast({
+          title: `Request ${status}`,
+          description: status === 'Accepted' ? "You can now contact them via WhatsApp." : "Request has been declined.",
+        });
+      })
+      .catch(async (err) => {
+        errorEmitter.emit('permission-error', new FirestorePermissionError({
+          path: reqRef.path,
+          operation: 'update',
+          requestResourceData: updateData
+        } satisfies SecurityRuleContext));
       });
-      toast({
-        title: `Request ${status}`,
-        description: status === 'Accepted' ? "You can now contact them via WhatsApp." : "Request has been declined.",
-      });
-    } catch (e: any) {
-      toast({ variant: "destructive", title: "Error", description: e.message });
-    }
   };
 
   const handleDeleteFeature = async (reqId: string, targetId?: string, isSent?: boolean) => {
@@ -175,13 +184,17 @@ export default function ArtistDashboardPage() {
 
     const reqRef = doc(db, 'artists', finalTargetId, 'features', reqId);
     
-    try {
-      await deleteDoc(reqRef);
-      toast({ title: "Request Removed", description: "The request has been deleted from your dashboard." });
-      setRequestToDelete(null);
-    } catch (e: any) {
-      toast({ variant: "destructive", title: "Error", description: e.message });
-    }
+    deleteDoc(reqRef)
+      .then(() => {
+        toast({ title: "Request Removed", description: "The request has been deleted from your dashboard." });
+        setRequestToDelete(null);
+      })
+      .catch(async (err) => {
+        errorEmitter.emit('permission-error', new FirestorePermissionError({
+          path: reqRef.path,
+          operation: 'delete'
+        } satisfies SecurityRuleContext));
+      });
   };
 
   if (userLoading || profileLoading) {

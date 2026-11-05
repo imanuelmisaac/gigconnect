@@ -28,7 +28,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { errorEmitter } from '@/firebase/error-emitter';
-import { FirestorePermissionError } from '@/firebase/errors';
+import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
 import Link from 'next/link';
 
 const GENRES = ["All Genres", "Kwaito", "Kwasa", "Amapiano", "Afrobeats", "Afropop", "Pop", "Rock", "Hip Hop", "Jazz", "Electronic", "R&B", "Reggae", "Other"];
@@ -53,7 +53,8 @@ export default function FindFeaturesPage() {
   const [message, setMessage] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
-  const { data: artistProfile } = useDoc(user ? doc(db, 'artists', user.uid) : null);
+  const artistProfileRef = useMemo(() => user ? doc(db, 'artists', user.uid) : null, [db, user]);
+  const { data: artistProfile } = useDoc(artistProfileRef);
 
   const startOfMonth = useMemo(() => {
     const d = new Date();
@@ -127,12 +128,12 @@ export default function FindFeaturesPage() {
         setIsDialogOpen(false);
         setMessage('');
       })
-      .catch((err) => {
+      .catch(async (err) => {
         errorEmitter.emit('permission-error', new FirestorePermissionError({
           path: featureRef.path,
           operation: 'create',
           requestResourceData: featureData
-        }));
+        } satisfies SecurityRuleContext));
       })
       .finally(() => setSubmitting(false));
   };
