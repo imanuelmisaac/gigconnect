@@ -1,4 +1,3 @@
-
 "use client"
 
 import { useState, useEffect, useMemo } from 'react';
@@ -45,12 +44,8 @@ export default function ArtistSetupPage() {
   });
 
   const [files, setFiles] = useState<{
-    idFront: string | null;
-    idBack: string | null;
     profilePic: string | null;
   }>({
-    idFront: null,
-    idBack: null,
     profilePic: null,
   });
 
@@ -67,8 +62,6 @@ export default function ArtistSetupPage() {
     ];
     
     const requiredFiles = [
-      files.idFront,
-      files.idBack,
       files.profilePic
     ];
 
@@ -158,8 +151,6 @@ export default function ArtistSetupPage() {
         whatsappNumber: formData.whatsappNumber,
         songLinks: [formData.songLink1, formData.songLink2, formData.songLink3].filter(link => link),
         videoLink: formData.videoLink,
-        idFrontUrl: files.idFront,
-        idBackUrl: files.idBack,
         profilePictureUrl: files.profilePic,
         profileComplete: completionStats.isComplete,
         updatedAt: serverTimestamp(),
@@ -210,7 +201,7 @@ export default function ArtistSetupPage() {
             {!completionStats.isComplete && (
               <p className="text-xs text-muted-foreground mt-2 flex items-center gap-1">
                 <AlertCircle className="h-3 w-3" />
-                Required: Basic info, African/Global genres, bio, booking price, WhatsApp, and all images.
+                Required: Basic info, genres, bio, booking price, WhatsApp, and profile picture.
               </p>
             )}
           </CardContent>
@@ -344,9 +335,9 @@ export default function ArtistSetupPage() {
                   <Upload className="h-5 w-5 text-primary" />
                   Media Uploads (Required)
                 </CardTitle>
-                <CardDescription>Upload identity proof and professional photos</CardDescription>
+                <CardDescription>Upload a professional photo for your profile</CardDescription>
               </CardHeader>
-              <CardContent className="grid md:grid-cols-3 gap-6 pt-6">
+              <CardContent className="grid md:grid-cols-1 gap-6 pt-6">
                 <div className="space-y-2">
                   <Label>Profile Picture</Label>
                   <div className={`flex flex-col items-center justify-center border-2 border-dashed rounded-lg p-6 hover:bg-accent transition-colors ${!files.profilePic ? 'border-destructive/30' : 'border-primary/30'}`}>
@@ -354,26 +345,6 @@ export default function ArtistSetupPage() {
                     <Input type="file" className="hidden" id="profile-pic" accept="image/*" onChange={(e) => handleFileChange(e, 'profilePic')} />
                     <Label htmlFor="profile-pic" className="cursor-pointer text-sm font-bold text-primary truncate max-w-full px-2">
                       {files.profilePic ? 'Image Selected' : 'Choose Image'}
-                    </Label>
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label>ID Front Side</Label>
-                  <div className={`flex flex-col items-center justify-center border-2 border-dashed rounded-lg p-6 hover:bg-accent transition-colors ${!files.idFront ? 'border-destructive/30' : 'border-primary/30'}`}>
-                    <Upload className="h-8 w-8 text-muted-foreground mb-2" />
-                    <Input type="file" className="hidden" id="id-front" accept="image/*" onChange={(e) => handleFileChange(e, 'idFront')} />
-                    <Label htmlFor="id-front" className="cursor-pointer text-sm font-bold text-primary truncate max-w-full px-2">
-                      {files.idFront ? 'File Selected' : 'Choose File'}
-                    </Label>
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label>ID Back Side</Label>
-                  <div className={`flex flex-col items-center justify-center border-2 border-dashed rounded-lg p-6 hover:bg-accent transition-colors ${!files.idBack ? 'border-destructive/30' : 'border-primary/30'}`}>
-                    <Upload className="h-8 w-8 text-muted-foreground mb-2" />
-                    <Input type="file" className="hidden" id="id-back" accept="image/*" onChange={(e) => handleFileChange(e, 'idBack')} />
-                    <Label htmlFor="id-back" className="cursor-pointer text-sm font-bold text-primary truncate max-w-full px-2">
-                      {files.idBack ? 'File Selected' : 'Choose File'}
                     </Label>
                   </div>
                 </div>

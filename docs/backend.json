@@ -1,4 +1,3 @@
-
 {
   "entities": {
     "User": {
@@ -86,12 +85,6 @@
           }
         },
         "videoLink": {
-          "type": "string"
-        },
-        "idFrontUrl": {
-          "type": "string"
-        },
-        "idBackUrl": {
           "type": "string"
         },
         "profilePictureUrl": {
