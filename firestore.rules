@@ -68,31 +68,38 @@ service cloud.firestore {
     match /events/{eventId} {
       allow read: if isSignedIn();
       allow create: if isSignedIn() && request.resource.data.gigMakerId == request.auth.uid;
-      allow update, delete: if isSignedIn() && (resource.data.gigMakerId == request.auth.uid || isAdmin());
+      allow update: if isSignedIn() && (resource.data.gigMakerId == request.auth.uid || isAdmin());
+      allow delete: if isSignedIn() && (resource.data.gigMakerId == request.auth.uid || isAdmin());
 
       match /applications/{applicationId} {
+        // Read: Artist who applied or the Gig Maker who owns the event
         allow read: if isSignedIn() && (
           isOwner(applicationId) || 
           isOwner(get(/databases/$(database)/documents/events/$(eventId)).data.gigMakerId)
         );
 
+        // Create: Artist can apply if event is Open and Payment is Complete
         allow create: if isSignedIn() && 
           isOwner(applicationId) && 
           request.resource.data.artistId == request.auth.uid &&
-          get(/databases/$(database)/documents/events/$(eventId)).data.status == 'Open';
+          get(/databases/$(database)/documents/events/$(eventId)).data.status == 'Open' &&
+          get(/databases/$(database)/documents/events/$(eventId)).data.paymentStatus == 'Complete';
 
+        // Update: Only the Gig Maker can update status (Artists cannot re-apply/edit)
         allow update: if isSignedIn() && (
           isOwner(get(/databases/$(database)/documents/events/$(eventId)).data.gigMakerId)
         );
         
+        // Delete: Gig Maker can delete, or Artist can delete ONLY if it's still 'pending'
         allow delete: if isSignedIn() && (
-          isOwner(applicationId) || 
+          (isOwner(applicationId) && resource.data.status == 'pending') || 
           isOwner(get(/databases/$(database)/documents/events/$(eventId)).data.gigMakerId) ||
           isAdmin()
         );
       }
     }
     
+    // Allow collection group queries for applications (needed for Artist Dashboard)
     match /{path=**}/applications/{applicationId} {
       allow read, list: if isSignedIn() && isOwner(applicationId);
     }

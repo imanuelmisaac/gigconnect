@@ -4,7 +4,7 @@
 import { useMemo, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUser, useFirestore, useCollection, useDoc } from '@/firebase';
-import { collection, query, where, doc, setDoc, serverTimestamp, getDoc, collectionGroup, Timestamp } from 'firebase/firestore';
+import { collection, query, where, doc, setDoc, serverTimestamp, collectionGroup, Timestamp } from 'firebase/firestore';
 import { 
   Loader2, 
   Calendar, 
@@ -19,7 +19,8 @@ import {
   AlertTriangle,
   AlertCircle,
   Crown,
-  Lock
+  Lock,
+  Check
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
@@ -99,16 +100,19 @@ export default function ArtistEventsPage() {
     );
   }, [db]);
 
-  const { data: rawEvents, loading: eventsLoading, error: eventsError } = useCollection(eventsQuery);
+  const { data: rawEvents, loading: eventsLoading } = useCollection(eventsQuery);
 
   const events = useMemo(() => {
-    if (!rawEvents) return [];
-    return [...rawEvents].sort((a: any, b: any) => {
+    if (!rawEvents || !rawApps) return rawEvents || [];
+    return [...rawEvents].map(event => ({
+      ...event,
+      hasApplied: rawApps.some((app: any) => app.eventId === event.eventId)
+    })).sort((a: any, b: any) => {
       const dateA = a.date || '';
       const dateB = b.date || '';
       return dateA.localeCompare(dateB);
     });
-  }, [rawEvents]);
+  }, [rawEvents, rawApps]);
 
   useEffect(() => {
     if (selectedEvent && artistProfile) {
@@ -117,6 +121,13 @@ export default function ArtistEventsPage() {
   }, [selectedEvent, artistProfile]);
 
   const handleOpenApply = (event: any) => {
+    if (event.hasApplied) {
+      toast({
+        title: "Already Applied",
+        description: "You have already submitted an application for this gig.",
+      });
+      return;
+    }
     if (isLimitReached) {
       toast({
         variant: "destructive",
@@ -132,44 +143,41 @@ export default function ArtistEventsPage() {
 
   const handleApplySubmit = async () => {
     if (!user || !db || !selectedEvent || !artistProfile) return;
-    if (isLimitReached) return;
+    if (isLimitReached || selectedEvent.hasApplied) return;
 
     setSubmitting(true);
 
-    try {
-      const appRef = doc(db, 'events', selectedEvent.eventId, 'applications', user.uid);
-      const applicationData = {
-        applicationId: user.uid,
-        eventId: selectedEvent.eventId,
-        artistId: user.uid,
-        artistName: artistProfile.artistName || 'Unknown Artist',
-        artistGenres: artistProfile.genres || [],
-        artistWhatsapp: artistProfile.whatsappNumber || '',
-        price: Number(proposedPrice),
-        message: message,
-        songLinks: artistProfile.songLinks || [],
-        videoLink: artistProfile.videoLink || '',
-        status: 'pending',
-        createdAt: serverTimestamp(),
-      };
+    const appRef = doc(db, 'events', selectedEvent.eventId, 'applications', user.uid);
+    const applicationData = {
+      applicationId: user.uid,
+      eventId: selectedEvent.eventId,
+      artistId: user.uid,
+      artistName: artistProfile.artistName || 'Unknown Artist',
+      artistGenres: artistProfile.genres || [],
+      artistWhatsapp: artistProfile.whatsappNumber || '',
+      price: Number(proposedPrice),
+      message: message,
+      songLinks: artistProfile.songLinks || [],
+      videoLink: artistProfile.videoLink || '',
+      status: 'pending',
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    };
 
-      setDoc(appRef, applicationData)
-        .then(() => {
-          toast({ title: "Application Sent!", description: `Success! You've applied for ${selectedEvent.title}.` });
-          setIsApplyDialogOpen(false);
-          setSelectedEvent(null);
-        })
-        .catch(async (err) => {
-          errorEmitter.emit('permission-error', new FirestorePermissionError({
-            path: appRef.path,
-            operation: 'create',
-            requestResourceData: applicationData,
-          }));
-        })
-        .finally(() => setSubmitting(false));
-    } catch (error) {
-      setSubmitting(false);
-    }
+    setDoc(appRef, applicationData)
+      .then(() => {
+        toast({ title: "Application Sent!", description: `Success! You've applied for ${selectedEvent.title}.` });
+        setIsApplyDialogOpen(false);
+        setSelectedEvent(null);
+      })
+      .catch(async (err) => {
+        errorEmitter.emit('permission-error', new FirestorePermissionError({
+          path: appRef.path,
+          operation: 'create',
+          requestResourceData: applicationData,
+        }));
+      })
+      .finally(() => setSubmitting(false));
   };
 
   if (userLoading || eventsLoading) {
@@ -220,8 +228,8 @@ export default function ArtistEventsPage() {
         {events.length > 0 ? (
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             {events.map((event: any) => (
-              <Card key={event.id} className="border-none shadow-md hover:shadow-lg transition-all overflow-hidden flex flex-col">
-                <div className="h-2 bg-primary" />
+              <Card key={event.id} className={`border-none shadow-md hover:shadow-lg transition-all overflow-hidden flex flex-col ${event.hasApplied ? 'opacity-75' : ''}`}>
+                <div className={`h-2 ${event.hasApplied ? 'bg-muted-foreground' : 'bg-primary'}`} />
                 <CardHeader>
                   <div className="flex justify-between mb-2">
                     <Badge variant="secondary" className="text-[10px] font-bold uppercase">{event.experienceLevel}</Badge>
@@ -241,10 +249,17 @@ export default function ArtistEventsPage() {
                 <CardFooter className="bg-muted/30 pt-4">
                   <Button 
                     className="w-full font-bold gap-2" 
-                    disabled={isLimitReached}
+                    variant={event.hasApplied ? "secondary" : "default"}
+                    disabled={isLimitReached || event.hasApplied}
                     onClick={() => handleOpenApply(event)}
                   >
-                    {isLimitReached ? <><Lock className="h-4 w-4" /> Limit Reached</> : <>Apply for Gig <Briefcase className="h-4 w-4" /></>}
+                    {event.hasApplied ? (
+                      <><Check className="h-4 w-4" /> Already Applied</>
+                    ) : isLimitReached ? (
+                      <><Lock className="h-4 w-4" /> Limit Reached</>
+                    ) : (
+                      <>Apply for Gig <Briefcase className="h-4 w-4" /></>
+                    )}
                   </Button>
                 </CardFooter>
               </Card>
