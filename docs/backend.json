@@ -20,7 +20,8 @@
           "enum": [
             "artist",
             "gig-maker",
-            "dj"
+            "dj",
+            "admin"
           ],
           "description": "The professional role of the user"
         },

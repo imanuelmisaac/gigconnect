@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Briefcase, ArrowLeft, Loader2, KeyRound, Mail, RefreshCw } from 'lucide-react';
+import { Briefcase, ArrowLeft, Loader2, KeyRound, Mail, RefreshCw, ShieldAlert } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -42,18 +42,6 @@ export default function LoginPage() {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
-      if (!user.emailVerified) {
-        toast({
-          variant: "destructive",
-          title: "Account Not Verified",
-          description: "Please verify your email address to access your dashboard.",
-        });
-        setIsUnverified(true);
-        setLoading(false);
-        // We stay signed in briefly to allow the "Resend" button to work
-        return;
-      }
-
       const userDocRef = doc(db, 'users', user.uid);
       const userDocSnap = await getDoc(userDocRef);
 
@@ -61,12 +49,26 @@ export default function LoginPage() {
         const userData = userDocSnap.data();
         const role = userData.role;
 
+        // Admins bypass email verification check for emergency access
+        if (role !== 'admin' && !user.emailVerified) {
+          toast({
+            variant: "destructive",
+            title: "Account Not Verified",
+            description: "Please verify your email address to access your dashboard.",
+          });
+          setIsUnverified(true);
+          setLoading(false);
+          return;
+        }
+
         toast({
           title: "Welcome back!",
           description: "Login successful.",
         });
 
-        if (role === 'artist' || role === 'dj') {
+        if (role === 'admin') {
+          router.push('/admin/dashboard');
+        } else if (role === 'artist' || role === 'dj') {
           router.push('/artist/dashboard');
         } else if (role === 'gig-maker') {
           router.push('/gig-maker/dashboard');

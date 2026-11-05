@@ -9,9 +9,19 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    // Helper: Is the user an admin?
+    function isAdmin() {
+      return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
     // Helper: Is the user the owner of the document?
     function isOwner(userId) {
       return request.auth.uid == userId;
+    }
+
+    // Master Override for Admins
+    match /{document=**} {
+      allow read, write: if isAdmin();
     }
 
     // Users Collection
@@ -43,7 +53,7 @@ service cloud.firestore {
     match /events/{eventId} {
       allow read: if isSignedIn();
       allow create: if isSignedIn() && request.resource.data.gigMakerId == request.auth.uid;
-      allow update, delete: if isSignedIn() && resource.data.gigMakerId == request.auth.uid;
+      allow update, delete: if isSignedIn() && (resource.data.gigMakerId == request.auth.uid || isAdmin());
 
       match /applications/{applicationId} {
         allow read: if isSignedIn() && (
@@ -62,7 +72,8 @@ service cloud.firestore {
         
         allow delete: if isSignedIn() && (
           isOwner(applicationId) || 
-          isOwner(get(/databases/$(database)/documents/events/$(eventId)).data.gigMakerId)
+          isOwner(get(/databases/$(database)/documents/events/$(eventId)).data.gigMakerId) ||
+          isAdmin()
         );
       }
     }
