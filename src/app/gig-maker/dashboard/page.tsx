@@ -1,7 +1,7 @@
 
 "use client"
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUser, useFirestore, useDoc, useCollection, useAuth } from '@/firebase';
 import { doc, collection, query, where, deleteDoc, writeBatch, getDocs } from 'firebase/firestore';
@@ -29,7 +29,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Alert, AlertDescription, AlertTitle } from '@/Alert';
 import { 
   AlertDialog, 
   AlertDialogAction, 
@@ -50,6 +50,7 @@ export default function GigMakerDashboardPage() {
 
   const [eventToDelete, setEventToDelete] = useState<{ id: string, title: string } | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const cleanupPerformed = useRef(false);
 
   const gigMakerDocRef = useMemo(() => {
     if (!db || !user) return null;
@@ -98,22 +99,28 @@ export default function GigMakerDashboardPage() {
     }
   }, [user, userLoading, router, auth, toast]);
 
+  // AUTO-CLEANUP LOGIC: Deletes events once the date has passed
   useEffect(() => {
-    if (!events || events.length === 0 || !db) return;
+    if (!events || events.length === 0 || !db || cleanupPerformed.current) return;
 
     const cleanupOldEvents = async () => {
       const now = new Date();
-      const twoDaysInMs = 2 * 24 * 60 * 60 * 1000;
       let deletedCount = 0;
 
       for (const event of events) {
         if (!event.date) continue;
-        const eventDate = new Date(event.date);
-        if (now.getTime() - eventDate.getTime() > twoDaysInMs) {
+
+        // event.date is in format YYYY-MM-DD
+        const [year, month, day] = event.date.split('-').map(Number);
+        // Expiry is the very end of the event day (23:59:59)
+        const eventExpiry = new Date(year, month - 1, day, 23, 59, 59);
+
+        if (now > eventExpiry) {
           try {
             const docId = event.id || event.eventId;
             if (!docId) continue;
 
+            // 1. Delete all applications first (cascading delete)
             const appsRef = collection(db, 'events', docId, 'applications');
             const appsSnap = await getDocs(appsRef);
             if (!appsSnap.empty) {
@@ -122,20 +129,22 @@ export default function GigMakerDashboardPage() {
               await batch.commit();
             }
             
+            // 2. Delete the event itself
             await deleteDoc(doc(db, 'events', docId));
             deletedCount++;
           } catch (e) {
-            console.error("Failed to cleanup event:", event.id);
+            console.error("Cleanup failed for event:", event.id, e);
           }
         }
       }
 
       if (deletedCount > 0) {
         toast({
-          title: "Cleanup Complete",
-          description: `Removed ${deletedCount} concluded events.`,
+          title: "Dashboard Cleaned",
+          description: `Automatically removed ${deletedCount} concluded events and their applications.`,
         });
       }
+      cleanupPerformed.current = true;
     };
 
     cleanupOldEvents();
@@ -268,8 +277,8 @@ export default function GigMakerDashboardPage() {
                 <ClipboardList className="h-6 w-6" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Cleanup Policy</p>
-                <p className="text-xs font-bold text-orange-600">2 Day Auto-Delete</p>
+                <p className="text-sm text-muted-foreground">Auto-Cleanup</p>
+                <p className="text-xs font-bold text-orange-600">Concluded Gigs Only</p>
               </div>
             </CardContent>
           </Card>
@@ -330,7 +339,7 @@ export default function GigMakerDashboardPage() {
                       <Link href={`/gig-maker/events/${event.id}/applications`}>
                         <Button size="sm" className="bg-primary hover:bg-primary/90 gap-1 text-white h-8">
                           <Users className="h-3 w-3" />
-                          View Applicants
+                          Applicants
                         </Button>
                       </Link>
 
