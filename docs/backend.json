@@ -94,6 +94,16 @@
         "profileComplete": {
           "type": "boolean"
         },
+        "subscriptionTier": {
+          "type": "string",
+          "enum": [
+            "free",
+            "package2",
+            "package3",
+            "package4"
+          ],
+          "default": "free"
+        },
         "createdAt": {
           "type": "string",
           "format": "date-time"

@@ -4,7 +4,7 @@
 import { useMemo, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUser, useFirestore, useCollection, useDoc } from '@/firebase';
-import { collection, query, where, doc, setDoc, serverTimestamp, getDoc } from 'firebase/firestore';
+import { collection, query, where, doc, setDoc, serverTimestamp, getDoc, collectionGroup, Timestamp } from 'firebase/firestore';
 import { 
   Loader2, 
   Calendar, 
@@ -17,7 +17,9 @@ import {
   Video,
   Send,
   AlertTriangle,
-  AlertCircle
+  AlertCircle,
+  Crown,
+  Lock
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
@@ -31,6 +33,13 @@ import Link from 'next/link';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+
+const SUBSCRIPTION_LIMITS = {
+  free: { apps: 2, label: "Free Tier" },
+  package2: { apps: 25, label: "Essential Pro" },
+  package3: { apps: 100, label: "Standard Pro" },
+  package4: { apps: 9999, label: "Ultimate Pro" }
+};
 
 export default function ArtistEventsPage() {
   const { user, loading: userLoading } = useUser();
@@ -52,9 +61,37 @@ export default function ArtistEventsPage() {
 
   const { data: artistProfile } = useDoc(artistProfileRef);
 
+  // Month tracking
+  const startOfMonth = useMemo(() => {
+    const d = new Date();
+    d.setDate(1);
+    d.setHours(0, 0, 0, 0);
+    return Timestamp.fromDate(d);
+  }, []);
+
+  const applicationsQuery = useMemo(() => {
+    if (!db || !user) return null;
+    return query(
+      collectionGroup(db, 'applications'),
+      where('artistId', '==', user.uid)
+    );
+  }, [db, user]);
+
+  const { data: rawApps } = useCollection(applicationsQuery);
+
+  const monthlyAppCount = useMemo(() => {
+    if (!rawApps) return 0;
+    return rawApps.filter((app: any) => 
+      app.createdAt && (app.createdAt.seconds >= startOfMonth.seconds)
+    ).length;
+  }, [rawApps, startOfMonth]);
+
+  const tierKey = (artistProfile?.subscriptionTier as keyof typeof SUBSCRIPTION_LIMITS) || 'free';
+  const limits = SUBSCRIPTION_LIMITS[tierKey];
+  const isLimitReached = monthlyAppCount >= limits.apps;
+
   const eventsQuery = useMemo(() => {
     if (!db) return null;
-    // Only show Open status AND payment verified status
     return query(
       collection(db, 'events'),
       where('status', '==', 'Open'),
@@ -73,8 +110,6 @@ export default function ArtistEventsPage() {
     });
   }, [rawEvents]);
 
-  const [appliedEventIds, setAppliedEventIds] = useState<Set<string>>(new Set());
-
   useEffect(() => {
     if (selectedEvent && artistProfile) {
       setProposedPrice(artistProfile.bookingPrice?.toString() || '');
@@ -82,45 +117,27 @@ export default function ArtistEventsPage() {
   }, [selectedEvent, artistProfile]);
 
   const handleOpenApply = (event: any) => {
+    if (isLimitReached) {
+      toast({
+        variant: "destructive",
+        title: "Monthly Limit Reached",
+        description: `Your ${limits.label} allows only ${limits.apps} applications per month. Upgrade to apply for more.`,
+      });
+      router.push('/artist/subscription');
+      return;
+    }
     setSelectedEvent(event);
     setIsApplyDialogOpen(true);
   };
 
   const handleApplySubmit = async () => {
     if (!user || !db || !selectedEvent || !artistProfile) return;
+    if (isLimitReached) return;
 
     setSubmitting(true);
 
     try {
-      const now = new Date();
-      const deadlineDate = new Date(selectedEvent.applicationDeadline);
-      deadlineDate.setHours(23, 59, 59, 999);
-
-      if (now > deadlineDate) {
-        toast({
-          variant: "destructive",
-          title: "Applications closed",
-          description: "The application deadline for this gig has passed.",
-        });
-        setIsApplyDialogOpen(false);
-        setSubmitting(false);
-        return;
-      }
-
       const appRef = doc(db, 'events', selectedEvent.eventId, 'applications', user.uid);
-      const appSnap = await getDoc(appRef);
-      
-      if (appSnap.exists()) {
-        toast({
-          title: "Already Applied",
-          description: "You have already submitted an application for this gig.",
-        });
-        setAppliedEventIds(prev => new Set(prev).add(selectedEvent.eventId));
-        setIsApplyDialogOpen(false);
-        setSubmitting(false);
-        return;
-      }
-
       const applicationData = {
         applicationId: user.uid,
         eventId: selectedEvent.eventId,
@@ -138,34 +155,19 @@ export default function ArtistEventsPage() {
 
       setDoc(appRef, applicationData)
         .then(() => {
-          toast({
-            title: "Application Sent!",
-            description: `You've applied for ${selectedEvent.title}.`,
-          });
+          toast({ title: "Application Sent!", description: `Success! You've applied for ${selectedEvent.title}.` });
           setIsApplyDialogOpen(false);
           setSelectedEvent(null);
-          setProposedPrice('');
-          setMessage('');
-          setAppliedEventIds(prev => new Set(prev).add(selectedEvent.eventId));
         })
-        .catch(async (serverError) => {
-          const permissionError = new FirestorePermissionError({
+        .catch(async (err) => {
+          errorEmitter.emit('permission-error', new FirestorePermissionError({
             path: appRef.path,
             operation: 'create',
             requestResourceData: applicationData,
-          } satisfies SecurityRuleContext);
-          errorEmitter.emit('permission-error', permissionError);
+          }));
         })
-        .finally(() => {
-          setSubmitting(false);
-        });
-
-    } catch (error: any) {
-      toast({
-        variant: "destructive",
-        title: "Submission Error",
-        description: "An error occurred while validating your application.",
-      });
+        .finally(() => setSubmitting(false));
+    } catch (error) {
       setSubmitting(false);
     }
   };
@@ -185,189 +187,98 @@ export default function ArtistEventsPage() {
           <div className="space-y-1">
             <Link href="/artist/dashboard" className="inline-flex items-center text-sm text-muted-foreground hover:text-primary transition-colors mb-2">
               <ArrowLeft className="mr-2 h-4 w-4" />
-              Back to Dashboard
+              Dashboard
             </Link>
-            <h1 className="text-4xl font-bold text-primary font-headline">Available Gigs</h1>
-            <p className="text-muted-foreground">Find and apply for musical events matching your style.</p>
+            <h1 className="text-4xl font-bold text-primary font-headline uppercase">Browse Gigs</h1>
+            <p className="text-muted-foreground">Find events in Botswana matching your style.</p>
           </div>
+          <Card className="bg-white p-4 border-none shadow-sm flex items-center gap-4">
+            <div className="text-right">
+               <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Monthly Quota</p>
+               <p className="text-xl font-black text-primary">{monthlyAppCount} / {limits.apps > 1000 ? '∞' : limits.apps}</p>
+            </div>
+            {isLimitReached && (
+              <Link href="/artist/subscription">
+                <Button size="sm" className="bg-accent hover:bg-accent/90 gap-1 text-[10px] font-bold">
+                  <Crown className="h-3 w-3" /> UPGRADE
+                </Button>
+              </Link>
+            )}
+          </Card>
         </header>
 
-        {eventsError && (
-          <Alert variant="destructive">
-            <AlertCircle className="h-4 w-4" />
-            <AlertTitle>Database Error</AlertTitle>
+        {isLimitReached && (
+          <Alert variant="destructive" className="bg-destructive/10 border-destructive/20 text-destructive">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertTitle className="font-bold">Monthly Limit Reached</AlertTitle>
             <AlertDescription>
-              Could not load events.
+              You have used all {limits.apps} applications for this month. Upgrade to one of our Pro plans to apply for more gigs.
             </AlertDescription>
           </Alert>
         )}
 
-        {events && events.length > 0 ? (
+        {events.length > 0 ? (
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {events.map((event: any) => {
-              const isApplied = appliedEventIds.has(event.eventId);
-              const deadline = new Date(event.applicationDeadline);
-              deadline.setHours(23, 59, 59, 999);
-              const isExpired = new Date() > deadline;
-              
-              return (
-                <Card key={event.id} className={`border-none shadow-md hover:shadow-lg transition-all overflow-hidden flex flex-col ${isExpired ? 'opacity-75 grayscale-[0.5]' : ''}`}>
-                  <div className={`h-3 ${isExpired ? 'bg-muted' : 'bg-primary'}`} />
-                  <CardHeader>
-                    <div className="flex justify-between items-start mb-2">
-                      <Badge variant="secondary" className="bg-accent/10 text-accent border-none font-bold">
-                        {event.experienceLevel}
-                      </Badge>
-                      {isApplied && (
-                        <Badge className="bg-green-500 text-white border-none gap-1">
-                          <CheckCircle2 className="h-3 w-3" /> Applied
-                        </Badge>
-                      )}
-                      {!isApplied && isExpired && (
-                        <Badge variant="destructive" className="gap-1">
-                          <AlertTriangle className="h-3 w-3" /> Deadline Passed
-                        </Badge>
-                      )}
-                    </div>
-                    <CardTitle className="text-xl font-headline line-clamp-1">{event.title}</CardTitle>
-                    <CardDescription className="line-clamp-2 mt-2">
-                      {event.description}
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="flex-1 space-y-4">
-                    <div className="grid grid-cols-2 gap-4 text-sm">
-                      <div className="flex items-center gap-2 text-muted-foreground">
-                        <Calendar className="h-4 w-4 text-primary" />
-                        <span>{event.date}</span>
-                      </div>
-                      <div className="flex items-center gap-2 text-muted-foreground">
-                        <MapPin className="h-4 w-4 text-primary" />
-                        <span className="truncate">{event.location}</span>
-                      </div>
-                      <div className="flex items-center gap-2 text-muted-foreground col-span-2">
-                        <span className="font-bold text-foreground">
-                          P{event.minPrice} - P{event.maxPrice}
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <p className="text-xs font-bold uppercase text-muted-foreground tracking-wider">Required Genres</p>
-                      <div className="flex flex-wrap gap-1.5">
-                        {event.genres?.map((genre: string) => (
-                          <Badge key={genre} variant="outline" className="text-[10px] py-0 px-2">
-                            {genre}
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div className={`pt-2 flex items-center gap-2 text-[11px] ${isExpired ? 'text-destructive font-bold' : 'text-muted-foreground'}`}>
-                      <Clock className="h-3 w-3" />
-                      <span>Deadline: {event.applicationDeadline}</span>
-                    </div>
-                  </CardContent>
-                  <CardFooter className="bg-muted/30 pt-4">
-                    <Button 
-                      className="w-full font-bold gap-2" 
-                      variant={isApplied ? "secondary" : isExpired ? "outline" : "default"}
-                      disabled={isApplied || isExpired}
-                      onClick={() => handleOpenApply(event)}
-                    >
-                      {isApplied ? (
-                        <>Applied Successfully</>
-                      ) : isExpired ? (
-                        <>Closed</>
-                      ) : (
-                        <>
-                          Apply for Gig
-                          <Briefcase className="h-4 w-4" />
-                        </>
-                      )}
-                    </Button>
-                  </CardFooter>
-                </Card>
-              );
-            })}
+            {events.map((event: any) => (
+              <Card key={event.id} className="border-none shadow-md hover:shadow-lg transition-all overflow-hidden flex flex-col">
+                <div className="h-2 bg-primary" />
+                <CardHeader>
+                  <div className="flex justify-between mb-2">
+                    <Badge variant="secondary" className="text-[10px] font-bold uppercase">{event.experienceLevel}</Badge>
+                    <Badge variant="outline" className="text-[10px] font-bold border-green-500 text-green-600">P{event.maxPrice}</Badge>
+                  </div>
+                  <CardTitle className="text-lg font-headline line-clamp-1">{event.title}</CardTitle>
+                </CardHeader>
+                <CardContent className="flex-1 space-y-4">
+                  <div className="grid gap-2 text-xs text-muted-foreground">
+                    <div className="flex items-center gap-2"><Calendar className="h-3 w-3" /> {event.date}</div>
+                    <div className="flex items-center gap-2"><MapPin className="h-3 w-3" /> {event.location}</div>
+                  </div>
+                  <div className="flex flex-wrap gap-1">
+                    {event.genres?.map((g: string) => <Badge key={g} variant="outline" className="text-[9px] py-0">{g}</Badge>)}
+                  </div>
+                </CardContent>
+                <CardFooter className="bg-muted/30 pt-4">
+                  <Button 
+                    className="w-full font-bold gap-2" 
+                    disabled={isLimitReached}
+                    onClick={() => handleOpenApply(event)}
+                  >
+                    {isLimitReached ? <><Lock className="h-4 w-4" /> Limit Reached</> : <>Apply for Gig <Briefcase className="h-4 w-4" /></>}
+                  </Button>
+                </CardFooter>
+              </Card>
+            ))}
           </div>
         ) : (
-          !eventsLoading && (
-            <Card className="border-dashed border-2 py-20 text-center">
-              <CardContent className="space-y-4">
-                <div className="bg-primary/5 p-4 rounded-full w-fit mx-auto">
-                  <Music className="h-12 w-12 text-primary/20" />
-                </div>
-                <div>
-                  <h2 className="text-xl font-bold">No active gigs found</h2>
-                  <p className="text-muted-foreground">Check back later for new opportunities.</p>
-                </div>
-              </CardContent>
-            </Card>
-          )
+          <Card className="border-dashed border-2 py-20 text-center bg-transparent">
+             <Music className="h-12 w-12 text-muted-foreground mx-auto mb-4 opacity-20" />
+             <h3 className="font-bold">No gigs available right now</h3>
+             <p className="text-sm text-muted-foreground">Check back later for new opportunities.</p>
+          </Card>
         )}
       </div>
 
       <Dialog open={isApplyDialogOpen} onOpenChange={setIsApplyDialogOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent>
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Send className="h-5 w-5 text-primary" />
-              Gig Application
-            </DialogTitle>
-            <DialogDescription>
-              Submit your interest for: <span className="font-bold text-foreground">{selectedEvent?.title}</span>
-            </DialogDescription>
+            <DialogTitle>Apply for {selectedEvent?.title}</DialogTitle>
+            <DialogDescription>Your monthly usage will be {monthlyAppCount + 1} / {limits.apps}.</DialogDescription>
           </DialogHeader>
-
-          <div className="space-y-6 py-4">
+          <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="proposedPrice">Proposed Price (P)</Label>
-              <div className="relative">
-                <span className="absolute left-3 top-2.5 text-muted-foreground font-bold">P</span>
-                <Input 
-                  id="proposedPrice" 
-                  type="number" 
-                  placeholder="0.00" 
-                  className="pl-8"
-                  value={proposedPrice}
-                  onChange={(e) => setProposedPrice(e.target.value)}
-                />
-              </div>
-              <p className="text-[10px] text-muted-foreground">Budget range: P{selectedEvent?.minPrice} - P{selectedEvent?.maxPrice}</p>
+              <Label>Proposed Price (P)</Label>
+              <Input type="number" value={proposedPrice} onChange={(e) => setProposedPrice(e.target.value)} />
             </div>
-
             <div className="space-y-2">
-              <Label htmlFor="message">Message to Gig Maker</Label>
-              <Textarea 
-                id="message" 
-                placeholder="Why are you the perfect fit for this event?" 
-                className="min-h-[100px]"
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
-              />
+              <Label>Why should we pick you?</Label>
+              <Textarea placeholder="Tell them about your experience..." value={message} onChange={(e) => setMessage(e.target.value)} />
             </div>
-
-            <Card className="bg-secondary/20 border-none">
-              <CardHeader className="p-3 pb-0">
-                <CardTitle className="text-xs font-bold uppercase text-muted-foreground">Portfolio Auto-fill</CardTitle>
-              </CardHeader>
-              <CardContent className="p-3 space-y-2">
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <Music className="h-3 w-3" />
-                  <span>{artistProfile?.songLinks?.length || 0} Song links attached</span>
-                </div>
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <Video className="h-3 w-3" />
-                  <span>{artistProfile?.videoLink ? 'Performance video attached' : 'No video link found'}</span>
-                </div>
-              </CardContent>
-            </Card>
           </div>
-
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsApplyDialogOpen(false)}>Cancel</Button>
-            <Button className="bg-primary px-8" onClick={handleApplySubmit} disabled={submitting || !proposedPrice}>
-              {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Send Application'}
+            <Button onClick={handleApplySubmit} disabled={submitting || !proposedPrice}>
+              {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Submit Application'}
             </Button>
           </DialogFooter>
         </DialogContent>
