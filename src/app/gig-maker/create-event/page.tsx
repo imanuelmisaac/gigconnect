@@ -1,9 +1,10 @@
+
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { useUser, useFirestore } from '@/firebase';
-import { collection, doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { useUser, useFirestore, useCollection } from '@/firebase';
+import { collection, doc, setDoc, serverTimestamp, query, where } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -11,11 +12,13 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Calendar as CalendarIcon, MapPin, Users, Briefcase, Loader2, ArrowLeft, CreditCard, MessageSquare, CheckCircle2 } from 'lucide-react';
+import { Calendar as CalendarIcon, MapPin, Users, Briefcase, Loader2, ArrowLeft, CreditCard, MessageSquare, CheckCircle2, Star, Sparkles } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
 import { WhatsAppButton } from '@/components/whatsapp-button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
 
 const GENRES = [
   "Kwaito", "Kwasa", "Amapiano", "Afrobeats", "Afropop", "Pop", "Rock", "Hip Hop", "Jazz", "Classical", 
@@ -31,6 +34,7 @@ export default function CreateEventPage() {
   const [loading, setLoading] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [hasSentScreenshot, setHasSentScreenshot] = useState(false);
+  const [showSuggestions, setShowSuggestions] = useState(false);
   
   const [formData, setFormData] = useState({
     title: '',
@@ -44,6 +48,21 @@ export default function CreateEventPage() {
     experienceLevel: 'Upcoming',
     genres: [] as string[],
   });
+
+  // Fetch Package 4 artists for suggestions
+  const proArtistsQuery = useMemo(() => {
+    if (!db) return null;
+    return query(collection(db, 'artists'), where('subscriptionTier', '==', 'package4'));
+  }, [db]);
+
+  const { data: proArtists } = useCollection(proArtistsQuery);
+
+  const matchedArtists = useMemo(() => {
+    if (!proArtists || formData.genres.length === 0) return [];
+    return proArtists.filter((artist: any) => 
+      artist.genres?.some((g: string) => formData.genres.includes(g))
+    ).slice(0, 3);
+  }, [proArtists, formData.genres]);
 
   useEffect(() => {
     if (!userLoading && !user) {
@@ -106,7 +125,7 @@ export default function CreateEventPage() {
         experienceLevel: formData.experienceLevel,
         genres: formData.genres,
         status: 'Open',
-        paymentStatus: 'Complete', // Optimistically complete as per instructions
+        paymentStatus: 'Complete', 
         listingExpiresAt: expiresAt.toISOString(),
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
@@ -119,7 +138,8 @@ export default function CreateEventPage() {
         description: "Your event is now live. Please ensure you've sent the payment confirmation.",
       });
 
-      router.push('/gig-maker/dashboard');
+      setShowPaymentModal(false);
+      setShowSuggestions(true);
     } catch (error: any) {
       toast({
         variant: "destructive",
@@ -282,76 +302,112 @@ export default function CreateEventPage() {
           </DialogHeader>
 
           <div className="space-y-6 py-4">
-            <div className="grid gap-4">
-              <div className="bg-secondary/30 p-4 rounded-xl space-y-3">
-                <h4 className="font-bold text-sm uppercase tracking-wider text-muted-foreground">Payment Options</h4>
-                
-                <div className="flex items-center justify-between text-sm border-b pb-2">
-                  <span className="font-medium">MyZaka</span>
-                  <span className="font-bold text-primary">74266208</span>
-                </div>
-                
-                <div className="flex items-center justify-between text-sm border-b pb-2">
-                  <span className="font-medium">Orange Money</span>
-                  <span className="font-bold text-primary">76479543</span>
-                </div>
-                
-                <div className="space-y-2 pt-1">
-                  <span className="text-xs font-medium block">Bank Voucher / Instant Cash</span>
-                  <div className="flex items-center justify-between text-sm border-b pb-2">
-                    <span>Number:</span>
-                    <span className="font-bold text-primary">74266208</span>
-                  </div>
-                  <p className="text-[10px] text-muted-foreground italic">
-                    * Send voucher PIN message to WhatsApp after transaction.
-                  </p>
-                </div>
+            <div className="bg-secondary/30 p-4 rounded-xl space-y-3">
+              <h4 className="font-bold text-sm uppercase tracking-wider text-muted-foreground">Payment Options</h4>
+              <div className="flex items-center justify-between text-sm border-b pb-2">
+                <span>MyZaka</span><span className="font-bold text-primary">74266208</span>
               </div>
-
-              <div className="bg-primary/5 p-4 rounded-xl border border-primary/20 space-y-3">
-                <h4 className="font-bold text-sm flex items-center gap-2 text-primary">
-                  <MessageSquare className="h-4 w-4" />
-                  Step 2: Verification
-                </h4>
-                <p className="text-xs text-muted-foreground">
-                  Send a screenshot of the transaction or the Bank Voucher PIN to our official WhatsApp line.
-                </p>
-                <WhatsAppButton 
-                  phoneNumber="+26774266208"
-                  message={`Hi, I've just paid P25 for my event "${formData.title}". Here is the proof of payment.`}
-                  className="w-full bg-green-600 hover:bg-green-700 text-white font-bold h-9"
-                  size="sm"
-                  onClick={() => setHasSentScreenshot(true)}
-                >
-                  Send Screenshot
-                </WhatsAppButton>
-                {hasSentScreenshot && (
-                  <p className="text-[10px] text-green-600 font-bold flex items-center gap-1 justify-center">
-                    <CheckCircle2 className="h-3 w-3" /> Screenshot sent initiated. You can now publish.
-                  </p>
-                )}
+              <div className="flex items-center justify-between text-sm border-b pb-2">
+                <span>Orange Money</span><span className="font-bold text-primary">76479543</span>
+              </div>
+              <div className="space-y-2 pt-1">
+                <span className="text-xs font-medium block">Bank Voucher / Instant Cash</span>
+                <div className="flex items-center justify-between text-sm border-b pb-2">
+                  <span>Number:</span><span className="font-bold text-primary">74266208</span>
+                </div>
+                <p className="text-[10px] text-muted-foreground italic">* Send voucher PIN message to WhatsApp after transaction.</p>
               </div>
             </div>
 
-            <div className="bg-amber-50 p-3 rounded-lg border border-amber-200">
-              <p className="text-[10px] text-amber-800 flex items-start gap-2">
-                <CheckCircle2 className="h-3 w-3 mt-0.5 shrink-0" />
-                Note: Your event will be live for 3 days. The admin will verify payment and may mark it as incomplete if no proof is received.
-              </p>
+            <div className="bg-primary/5 p-4 rounded-xl border border-primary/20 space-y-3">
+              <h4 className="font-bold text-sm flex items-center gap-2 text-primary">
+                <MessageSquare className="h-4 w-4" /> Step 2: Verification
+              </h4>
+              <WhatsAppButton 
+                phoneNumber="+26774266208"
+                message={`Hi, I've just paid P25 for my event "${formData.title}". Here is the proof of payment.`}
+                className="w-full bg-green-600 hover:bg-green-700 text-white font-bold h-9"
+                size="sm"
+                onClick={() => setHasSentScreenshot(true)}
+              >
+                Send Screenshot
+              </WhatsAppButton>
+              {hasSentScreenshot && (
+                <p className="text-[10px] text-green-600 font-bold flex items-center gap-1 justify-center">
+                  <CheckCircle2 className="h-3 w-3" /> Screenshot sent initiated. You can now publish.
+                </p>
+              )}
             </div>
           </div>
 
           <DialogFooter className="flex-col sm:flex-row gap-2">
-            <Button variant="outline" onClick={() => setShowPaymentModal(false)} disabled={loading}>
-              Cancel
-            </Button>
-            <Button 
-              className="bg-primary flex-1" 
-              onClick={handleFinalPublish} 
-              disabled={loading || !hasSentScreenshot}
-            >
+            <Button variant="outline" onClick={() => setShowPaymentModal(false)} disabled={loading}>Cancel</Button>
+            <Button className="bg-primary flex-1" onClick={handleFinalPublish} disabled={loading || !hasSentScreenshot}>
               {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-              {hasSentScreenshot ? 'Publish Now' : 'Send Screenshot First'}
+              Publish Now
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showSuggestions} onOpenChange={(open) => {
+        if (!open) router.push('/gig-maker/dashboard');
+        setShowSuggestions(open);
+      }}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-accent text-2xl font-headline">
+              <Sparkles className="h-6 w-6" />
+              Perfect Match Found!
+            </DialogTitle>
+            <DialogDescription>
+              We've identified top-tier Ultimate Pro artists who match your event's vibe. Consider contacting them directly for a professional performance.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="grid gap-4 py-6">
+            {matchedArtists.length > 0 ? matchedArtists.map((artist: any) => (
+              <Card key={artist.id} className="border-2 border-accent/20 bg-accent/5 overflow-hidden">
+                <CardContent className="p-4 flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-4">
+                    <Avatar className="h-16 w-16 border-2 border-accent">
+                      <AvatarImage src={artist.profilePictureUrl} />
+                      <AvatarFallback className="bg-secondary text-primary font-bold">
+                        {artist.artistName?.substring(0, 2).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <h4 className="font-bold text-lg text-primary">{artist.artistName}</h4>
+                        <Badge className="bg-accent text-[9px] uppercase"><Star className="h-2 w-2 mr-1" /> PRO</Badge>
+                      </div>
+                      <p className="text-xs text-muted-foreground line-clamp-1">{artist.bio || 'Professional talent.'}</p>
+                      <div className="flex gap-1">
+                        {artist.genres?.slice(0, 2).map((g: string) => <Badge key={g} variant="secondary" className="text-[8px]">{g}</Badge>)}
+                      </div>
+                    </div>
+                  </div>
+                  <WhatsAppButton 
+                    phoneNumber={artist.whatsappNumber || ''}
+                    message={`Hi ${artist.artistName}, I just created an event "${formData.title}" and you were recommended by GigConnect. I'd like to discuss a booking.`}
+                    size="sm"
+                    className="bg-accent hover:bg-accent/90 text-white font-bold"
+                  >
+                    Contact Now
+                  </WhatsAppButton>
+                </CardContent>
+              </Card>
+            )) : (
+              <div className="text-center py-8">
+                <Users className="h-12 w-12 text-muted-foreground/20 mx-auto mb-2" />
+                <p className="text-sm text-muted-foreground">No Ultimate Pro matches found for these genres right now.</p>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button className="w-full bg-primary" onClick={() => router.push('/gig-maker/dashboard')}>
+              Go to Dashboard
             </Button>
           </DialogFooter>
         </DialogContent>

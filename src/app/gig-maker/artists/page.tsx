@@ -12,7 +12,9 @@ import {
   ArrowLeft,
   Filter,
   Users,
-  AlertCircle
+  AlertCircle,
+  Crown,
+  Star
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
@@ -39,7 +41,6 @@ const PRICE_RANGES = [
   { label: "Under P5,000", value: 5000 },
   { label: "Under P8,000", value: 8000 },
   { label: "Under P10,000", value: 10000 },
-  { label: "Under P15,000", value: 15000 },
   { label: "Under P20,000", value: 20000 },
   { label: "Under P25,000", value: 25000 },
   { label: "Under P30,000", value: 30000 },
@@ -63,20 +64,29 @@ export default function BrowseArtistsPage() {
   const filteredTalent = useMemo(() => {
     if (!talent) return [];
     
-    return talent.filter((person: any) => {
-      if (!person.artistName && !person.fullName) return false;
+    return talent
+      .filter((person: any) => {
+        if (!person.artistName && !person.fullName) return false;
 
-      const name = (person.artistName || person.fullName || '').toLowerCase();
-      const matchesSearch = name.includes(searchQuery.toLowerCase());
-      
-      const matchesGenre = selectedGenre === 'All Genres' || 
-                          (person.genres && Array.isArray(person.genres) && person.genres.includes(selectedGenre));
-      
-      const price = Number(person.bookingPrice) || 0;
-      const matchesPrice = price <= maxPrice;
-      
-      return matchesSearch && matchesGenre && matchesPrice;
-    });
+        const name = (person.artistName || person.fullName || '').toLowerCase();
+        const matchesSearch = name.includes(searchQuery.toLowerCase());
+        
+        const matchesGenre = selectedGenre === 'All Genres' || 
+                            (person.genres && Array.isArray(person.genres) && person.genres.includes(selectedGenre));
+        
+        const price = Number(person.bookingPrice) || 0;
+        const matchesPrice = price <= maxPrice;
+        
+        return matchesSearch && matchesGenre && matchesPrice;
+      })
+      .sort((a: any, b: any) => {
+        // Ultimate Pro (Package 4) Priority
+        const aIsPro = a.subscriptionTier === 'package4';
+        const bIsPro = b.subscriptionTier === 'package4';
+        if (aIsPro && !bIsPro) return -1;
+        if (!aIsPro && bIsPro) return 1;
+        return 0;
+      });
   }, [talent, searchQuery, selectedGenre, maxPrice]);
 
   if (loading) {
@@ -193,67 +203,87 @@ export default function BrowseArtistsPage() {
           <div className="lg:col-span-3">
             {filteredTalent.length > 0 ? (
               <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-6">
-                {filteredTalent.map((person: any) => (
-                  <Card key={person.id} className="border-none shadow-sm hover:shadow-md transition-all overflow-hidden flex flex-col group slide-up">
-                    <div className="h-20 bg-gradient-to-br from-primary/80 to-accent/80" />
-                    <CardHeader className="relative pt-0 flex flex-col items-center">
-                      <div className="flex justify-center -mt-10 mb-3">
-                        <Avatar className="h-20 w-20 border-4 border-white shadow-md">
-                          <AvatarImage src={person.profilePictureUrl} />
-                          <AvatarFallback className="bg-secondary text-primary font-bold text-xl">
-                            {(person.artistName || person.fullName || 'AR').substring(0, 2).toUpperCase()}
-                          </AvatarFallback>
-                        </Avatar>
-                      </div>
-                      <CardTitle className="text-xl font-headline text-center group-hover:text-primary transition-colors line-clamp-1">
-                        {person.artistName || person.fullName}
-                      </CardTitle>
-                      <div className="flex items-center text-xs text-muted-foreground gap-1 mt-1">
-                        <MapPin className="h-3 w-3" />
-                        {person.location || 'Location unknown'}
-                      </div>
-                    </CardHeader>
-                    <CardContent className="flex-1 space-y-4 text-center">
-                      <div className="flex flex-wrap justify-center gap-1.5 min-h-[24px]">
-                        {person.genres && Array.isArray(person.genres) && person.genres.length > 0 ? (
-                          person.genres.map((genre: string) => (
-                            <Badge key={genre} variant="secondary" className="text-[10px] py-0 px-2">
-                              {genre}
-                            </Badge>
-                          ))
-                        ) : (
-                          <span className="text-[10px] text-muted-foreground italic">No genres listed</span>
+                {filteredTalent.map((person: any) => {
+                  const isUltimatePro = person.subscriptionTier === 'package4';
+                  return (
+                    <Card key={person.id} className={cn(
+                      "border-none shadow-sm hover:shadow-md transition-all overflow-hidden flex flex-col group slide-up",
+                      isUltimatePro && "ring-2 ring-accent ring-offset-2"
+                    )}>
+                      <div className={cn(
+                        "h-20 bg-gradient-to-br transition-all",
+                        isUltimatePro ? "from-accent to-primary" : "from-primary/80 to-accent/80"
+                      )} />
+                      <CardHeader className="relative pt-0 flex flex-col items-center">
+                        <div className="flex justify-center -mt-10 mb-3">
+                          <Avatar className={cn(
+                            "h-20 w-20 border-4 border-white shadow-md",
+                            isUltimatePro && "border-accent"
+                          )}>
+                            <AvatarImage src={person.profilePictureUrl} />
+                            <AvatarFallback className="bg-secondary text-primary font-bold text-xl">
+                              {(person.artistName || person.fullName || 'AR').substring(0, 2).toUpperCase()}
+                            </AvatarFallback>
+                          </Avatar>
+                        </div>
+                        {isUltimatePro && (
+                          <Badge className="bg-accent text-white font-black text-[9px] uppercase tracking-widest mb-2 flex items-center gap-1">
+                            <Star className="h-2 w-2 fill-white" /> Featured
+                          </Badge>
                         )}
-                      </div>
-                      
-                      <p className="text-sm text-muted-foreground line-clamp-3 italic px-2 min-h-[60px]">
-                        "{person.bio || 'Professional talent ready for booking.'}"
-                      </p>
+                        <CardTitle className="text-xl font-headline text-center group-hover:text-primary transition-colors line-clamp-1">
+                          {person.artistName || person.fullName}
+                        </CardTitle>
+                        <div className="flex items-center text-xs text-muted-foreground gap-1 mt-1">
+                          <MapPin className="h-3 w-3" />
+                          {person.location || 'Location unknown'}
+                        </div>
+                      </CardHeader>
+                      <CardContent className="flex-1 space-y-4 text-center">
+                        <div className="flex flex-wrap justify-center gap-1.5 min-h-[24px]">
+                          {person.genres && Array.isArray(person.genres) && person.genres.length > 0 ? (
+                            person.genres.map((genre: string) => (
+                              <Badge key={genre} variant="secondary" className="text-[10px] py-0 px-2">
+                                {genre}
+                              </Badge>
+                            ))
+                          ) : (
+                            <span className="text-[10px] text-muted-foreground italic">No genres listed</span>
+                          )}
+                        </div>
+                        
+                        <p className="text-sm text-muted-foreground line-clamp-3 italic px-2 min-h-[60px]">
+                          "{person.bio || 'Professional talent ready for booking.'}"
+                        </p>
 
-                      <div className="flex items-center justify-center gap-4 pt-2 border-t">
-                        <div className="text-center">
-                          <p className="text-[10px] uppercase font-bold text-muted-foreground tracking-tighter">Booking</p>
-                          <p className="font-bold text-green-600">P{Number(person.bookingPrice || 0).toLocaleString()}</p>
+                        <div className="flex items-center justify-center gap-4 pt-2 border-t">
+                          <div className="text-center">
+                            <p className="text-[10px] uppercase font-bold text-muted-foreground tracking-tighter">Booking</p>
+                            <p className="font-bold text-green-600">P{Number(person.bookingPrice || 0).toLocaleString()}</p>
+                          </div>
+                          <div className="h-8 w-px bg-border" />
+                          <div className="text-center">
+                            <p className="text-[10px] uppercase font-bold text-muted-foreground tracking-tighter">Features</p>
+                            <p className="font-bold text-primary">{person.featurePrice ? `P${Number(person.featurePrice).toLocaleString()}` : 'N/A'}</p>
+                          </div>
                         </div>
-                        <div className="h-8 w-px bg-border" />
-                        <div className="text-center">
-                          <p className="text-[10px] uppercase font-bold text-muted-foreground tracking-tighter">Features</p>
-                          <p className="font-bold text-primary">{person.featurePrice ? `P${Number(person.featurePrice).toLocaleString()}` : 'N/A'}</p>
-                        </div>
-                      </div>
-                    </CardContent>
-                    <CardFooter className="bg-muted/30 pt-4 gap-2">
-                      <WhatsAppButton 
-                        phoneNumber={person.whatsappNumber || ''}
-                        message={`Hi ${person.artistName || person.fullName}, I saw your profile on GigConnect and I'm interested in booking you.`}
-                        className="flex-1 bg-green-600 hover:bg-green-700 text-white border-none font-bold"
-                        disabled={!person.whatsappNumber}
-                      >
-                        Contact Talent
-                      </WhatsAppButton>
-                    </CardFooter>
-                  </Card>
-                ))}
+                      </CardContent>
+                      <CardFooter className="bg-muted/30 pt-4 gap-2">
+                        <WhatsAppButton 
+                          phoneNumber={person.whatsappNumber || ''}
+                          message={`Hi ${person.artistName || person.fullName}, I saw your profile on GigConnect and I'm interested in booking you.`}
+                          className={cn(
+                            "flex-1 font-bold",
+                            isUltimatePro ? "bg-accent hover:bg-accent/90 text-white" : "bg-green-600 hover:bg-green-700 text-white border-none"
+                          )}
+                          disabled={!person.whatsappNumber}
+                        >
+                          {isUltimatePro ? 'Contact Pro Artist' : 'Contact Talent'}
+                        </WhatsAppButton>
+                      </CardFooter>
+                    </Card>
+                  );
+                })}
               </div>
             ) : (
               <Card className="border-dashed border-2 py-32 text-center bg-transparent">
@@ -280,4 +310,8 @@ export default function BrowseArtistsPage() {
       </div>
     </div>
   );
+}
+
+function cn(...inputs: any[]) {
+  return inputs.filter(Boolean).join(' ');
 }
