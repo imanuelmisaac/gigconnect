@@ -35,7 +35,7 @@ const GENRES = ["All Genres", "Kwaito", "Kwasa", "Amapiano", "Afrobeats", "Afrop
 
 const SUBSCRIPTION_LIMITS = {
   free: { features: 3, label: "Free Tier" },
-  package2: { features: 40, label: "Essential Pro" },
+  package2: { features: 10, label: "Essential Pro" },
   package3: { features: 999, label: "Standard Pro" },
   package4: { features: 9999, label: "Ultimate Pro" }
 };

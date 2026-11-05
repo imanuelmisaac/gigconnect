@@ -50,8 +50,8 @@ import { Progress } from '@/components/ui/progress';
 
 const SUBSCRIPTION_LIMITS = {
   free: { apps: 2, features: 3, label: "Free Tier" },
-  package2: { apps: 25, features: 40, label: "Essential Pro" },
-  package3: { apps: 100, features: 999, label: "Standard Pro" },
+  package2: { apps: 15, features: 10, label: "Essential Pro" },
+  package3: { apps: 40, features: 999, label: "Standard Pro" },
   package4: { apps: 9999, features: 9999, label: "Ultimate Pro" }
 };
 

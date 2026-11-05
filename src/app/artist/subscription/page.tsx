@@ -39,8 +39,8 @@ const PACKAGES = [
     id: 'package2',
     name: 'Essential Pro',
     price: 20,
-    features: ['25 Event Applications / mo', '40 Feature Requests / mo', 'Pro Badge', 'Direct WhatsApp Contact'],
-    limitLabel: '25 Apps, 40 Features',
+    features: ['15 Event Applications / mo', '10 Feature Requests / mo', 'Pro Badge', 'Direct WhatsApp Contact'],
+    limitLabel: '15 Apps, 10 Features',
     color: 'bg-blue-500',
     popular: true
   },
@@ -48,8 +48,8 @@ const PACKAGES = [
     id: 'package3',
     name: 'Standard Pro',
     price: 60,
-    features: ['100 Event Applications / mo', 'Unlimited Feature Requests', 'Featured Artist Status', 'Analytics Dashboard'],
-    limitLabel: '100 Apps, ∞ Features',
+    features: ['40 Event Applications / mo', 'Unlimited Feature Requests', 'Featured Artist Status', 'Analytics Dashboard'],
+    limitLabel: '40 Apps, ∞ Features',
     color: 'bg-accent'
   },
   {
