@@ -15,8 +15,8 @@ import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
-// Specific admin UID provided by user
-const ADMIN_UID = 'yZMHgaiCt2dmbqfOziWkc2t33th2';
+// Updated admin UID provided by user
+const ADMIN_UID = 'rJq93j6Mi5NuAPEPNDYpLtSgFfc2';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');

@@ -1,4 +1,3 @@
-
 "use client"
 
 import { useEffect, useMemo, useState } from 'react';
@@ -62,8 +61,8 @@ const TIER_OPTIONS = [
   { value: 'package4', label: 'Ultimate Pro (P80)' }
 ];
 
-// Specific admin UID provided by user
-const ADMIN_UID = 'yZMHgaiCt2dmbqfOziWkc2t33th2';
+// Updated admin UID
+const ADMIN_UID = 'rJq93j6Mi5NuAPEPNDYpLtSgFfc2';
 
 export default function AdminDashboardPage() {
   const { user, loading: userLoading } = useUser();
