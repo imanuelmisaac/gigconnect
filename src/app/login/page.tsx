@@ -45,21 +45,21 @@ export default function LoginPage() {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
-      const userDocRef = doc(db, 'users', user.uid);
-      const userDocSnap = await getDoc(userDocRef);
-
-      // Check for Admin Override
+      // IMMEDIATE ADMIN CHECK: If UID matches system owner, skip verification/role checks and go to admin
       if (user.uid === ADMIN_UID) {
         toast({ title: "Admin Login", description: "System administrator access granted." });
         router.push('/admin/dashboard');
         return;
       }
 
+      const userDocRef = doc(db, 'users', user.uid);
+      const userDocSnap = await getDoc(userDocRef);
+
       if (userDocSnap.exists()) {
         const userData = userDocSnap.data();
         const role = userData.role;
 
-        // Admins bypass email verification check for emergency access
+        // Admins bypass email verification check
         if (role !== 'admin' && !user.emailVerified) {
           toast({
             variant: "destructive",
@@ -94,6 +94,7 @@ export default function LoginPage() {
         await signOut(auth);
       }
     } catch (error: any) {
+      console.error("Login Error:", error);
       toast({
         variant: "destructive",
         title: "Login Error",
