@@ -23,7 +23,8 @@ import {
   CheckCircle2,
   XCircle,
   Trash2,
-  Archive
+  Archive,
+  ArrowRight
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
@@ -42,6 +43,7 @@ import {
   AlertDialogHeader, 
   AlertDialogTitle 
 } from '@/components/ui/alert-dialog';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 export default function ArtistDashboardPage() {
   const { user, loading: userLoading } = useUser();
@@ -50,7 +52,7 @@ export default function ArtistDashboardPage() {
   const router = useRouter();
   const { toast } = useToast();
 
-  const [requestToDelete, setRequestToDelete] = useState<string | null>(null);
+  const [requestToDelete, setRequestToDelete] = useState<{ id: string, targetId?: string, isSent?: boolean } | null>(null);
 
   const artistDocRef = useMemo(() => {
     if (!db || !user) return null;
@@ -71,12 +73,20 @@ export default function ArtistDashboardPage() {
 
   const featuresQuery = useMemo(() => {
     if (!db || !user) return null;
-    return query(
-      collection(db, 'artists', user.uid, 'features')
-    );
+    return query(collection(db, 'artists', user.uid, 'features'));
   }, [db, user]);
 
   const { data: rawFeatures, loading: featuresLoading } = useCollection(featuresQuery);
+
+  const sentFeaturesQuery = useMemo(() => {
+    if (!db || !user) return null;
+    return query(
+      collectionGroup(db, 'features'),
+      where('senderId', '==', user.uid)
+    );
+  }, [db, user]);
+
+  const { data: rawSentFeatures, loading: sentFeaturesLoading } = useCollection(sentFeaturesQuery);
 
   const applications = useMemo(() => {
     if (!rawApps) return [];
@@ -87,6 +97,11 @@ export default function ArtistDashboardPage() {
     if (!rawFeatures) return [];
     return [...rawFeatures].sort((a: any, b: any) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
   }, [rawFeatures]);
+
+  const sentRequests = useMemo(() => {
+    if (!rawSentFeatures) return [];
+    return [...rawSentFeatures].sort((a: any, b: any) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+  }, [rawSentFeatures]);
 
   useEffect(() => {
     if (!userLoading) {
@@ -133,9 +148,14 @@ export default function ArtistDashboardPage() {
     }
   };
 
-  const handleDeleteFeature = async (reqId: string) => {
+  const handleDeleteFeature = async (reqId: string, targetId?: string, isSent?: boolean) => {
     if (!db || !user) return;
-    const reqRef = doc(db, 'artists', user.uid, 'features', reqId);
+    
+    // If it's a sent request, the document lives in the OTHER artist's features subcollection
+    const finalTargetId = isSent ? targetId : user.uid;
+    if (!finalTargetId) return;
+
+    const reqRef = doc(db, 'artists', finalTargetId, 'features', reqId);
     
     try {
       await deleteDoc(reqRef);
@@ -355,96 +375,134 @@ export default function ArtistDashboardPage() {
             <section className="space-y-4">
               <h3 className="text-xl font-bold font-headline flex items-center gap-2 text-primary">
                 <Sparkles className="h-5 w-5 text-accent" />
-                Collaboration Requests
+                Collaborations
               </h3>
-              <div className="grid gap-4">
-                {featuresLoading ? (
-                  <div className="h-24 flex items-center justify-center bg-white rounded-xl">
-                    <Loader2 className="h-6 w-6 animate-spin text-primary" />
-                  </div>
-                ) : featureRequests && featureRequests.length > 0 ? (
-                  featureRequests.map((req: any) => (
-                    <Card key={req.id} className="border-none shadow-sm hover:shadow-md transition-shadow">
-                      <CardContent className="p-4 space-y-4">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-4">
-                            <Avatar className="h-10 w-10 border">
-                              <AvatarFallback className="bg-secondary text-primary font-bold text-xs">
-                                {req.senderName?.substring(0, 2).toUpperCase()}
-                              </AvatarFallback>
-                            </Avatar>
-                            <div>
-                              <h4 className="font-bold text-sm">{req.senderName}</h4>
-                              <p className="text-[10px] text-muted-foreground">Request: {req.status}</p>
+
+              <Tabs defaultValue="received" className="w-full">
+                <TabsList className="grid w-full grid-cols-2 bg-secondary/20">
+                  <TabsTrigger value="received">Received</TabsTrigger>
+                  <TabsTrigger value="sent">Sent</TabsTrigger>
+                </TabsList>
+                
+                <TabsContent value="received" className="space-y-4 pt-4">
+                  {featuresLoading ? (
+                    <div className="h-24 flex items-center justify-center bg-white rounded-xl">
+                      <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                    </div>
+                  ) : featureRequests && featureRequests.length > 0 ? (
+                    featureRequests.map((req: any) => (
+                      <Card key={req.id} className="border-none shadow-sm hover:shadow-md transition-shadow">
+                        <CardContent className="p-4 space-y-4">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-4">
+                              <Avatar className="h-10 w-10 border">
+                                <AvatarFallback className="bg-secondary text-primary font-bold text-xs">
+                                  {req.senderName?.substring(0, 2).toUpperCase()}
+                                </AvatarFallback>
+                              </Avatar>
+                              <div>
+                                <h4 className="font-bold text-sm">{req.senderName}</h4>
+                                <p className="text-[10px] text-muted-foreground">Status: {req.status}</p>
+                              </div>
                             </div>
+                            <Badge variant="outline" className="text-[10px]">{req.status}</Badge>
                           </div>
-                          <Badge variant="outline" className="text-[10px]">{req.status}</Badge>
-                        </div>
-                        
-                        <p className="text-xs text-muted-foreground bg-muted/30 p-3 rounded-lg italic">
-                          "{req.message}"
-                        </p>
-
-                        <div className="flex flex-wrap items-center justify-end gap-2">
-                          {req.status === 'pending' && (
-                            <>
-                              <Button 
-                                size="sm" 
-                                className="bg-green-600 hover:bg-green-700 text-white font-bold h-8 gap-1"
-                                onClick={() => handleUpdateFeatureStatus(req.id, 'Accepted')}
-                              >
-                                <CheckCircle2 className="h-3 w-3" /> Accept
-                              </Button>
-                              <Button 
-                                size="sm" 
-                                variant="destructive" 
-                                className="h-8 font-bold gap-1"
-                                onClick={() => handleUpdateFeatureStatus(req.id, 'Rejected')}
-                              >
-                                <XCircle className="h-3 w-3" /> Reject
-                              </Button>
-                            </>
-                          )}
                           
-                          {req.status === 'Accepted' && (
-                            <>
-                              {req.senderWhatsapp && (
-                                <WhatsAppButton 
-                                  phoneNumber={req.senderWhatsapp} 
-                                  message={`Hi ${req.senderName}, I've accepted your collaboration request on GigConnect. Let's work!`}
-                                  size="sm"
-                                  className="bg-green-600 text-white hover:bg-green-700 font-bold h-8"
-                                />
-                              )}
-                              <Button 
-                                variant="outline" 
-                                size="sm" 
-                                className="h-8 gap-1 text-muted-foreground"
-                                onClick={() => setRequestToDelete(req.id)}
-                              >
-                                <Archive className="h-3 w-3" /> Done
-                              </Button>
-                            </>
-                          )}
+                          <p className="text-xs text-muted-foreground bg-muted/30 p-3 rounded-lg italic">
+                            "{req.message}"
+                          </p>
 
-                          {req.status === 'Rejected' && (
-                             <Button 
-                             variant="ghost" 
-                             size="sm" 
-                             className="h-8 gap-1 text-destructive"
-                             onClick={() => setRequestToDelete(req.id)}
-                           >
-                             <Trash2 className="h-3 w-3" /> Clear
-                           </Button>
-                          )}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))
-                ) : (
-                  <p className="text-sm text-muted-foreground italic text-center py-4 bg-white rounded-xl border border-dashed">No feature requests received.</p>
-                )}
-              </div>
+                          <div className="flex flex-wrap items-center justify-end gap-2">
+                            {req.status === 'pending' && (
+                              <>
+                                <Button 
+                                  size="sm" 
+                                  className="bg-green-600 hover:bg-green-700 text-white font-bold h-8 gap-1"
+                                  onClick={() => handleUpdateFeatureStatus(req.id, 'Accepted')}
+                                >
+                                  <CheckCircle2 className="h-3 w-3" /> Accept
+                                </Button>
+                                <Button 
+                                  size="sm" 
+                                  variant="destructive" 
+                                  className="h-8 font-bold gap-1"
+                                  onClick={() => setRequestToDelete({ id: req.id })}
+                                >
+                                  <XCircle className="h-3 w-3" /> Reject
+                                </Button>
+                              </>
+                            )}
+                            
+                            {req.status === 'Accepted' && (
+                              <>
+                                {req.senderWhatsapp && (
+                                  <WhatsAppButton 
+                                    phoneNumber={req.senderWhatsapp} 
+                                    message={`Hi ${req.senderName}, I've accepted your collaboration request on GigConnect. Let's work!`}
+                                    size="sm"
+                                    className="bg-green-600 text-white hover:bg-green-700 font-bold h-8"
+                                  />
+                                )}
+                                <Button 
+                                  variant="outline" 
+                                  size="sm" 
+                                  className="h-8 gap-1 text-muted-foreground"
+                                  onClick={() => setRequestToDelete({ id: req.id })}
+                                >
+                                  <Archive className="h-3 w-3" /> Done
+                                </Button>
+                              </>
+                            )}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))
+                  ) : (
+                    <p className="text-sm text-muted-foreground italic text-center py-4 bg-white rounded-xl border border-dashed">No feature requests received.</p>
+                  )}
+                </TabsContent>
+
+                <TabsContent value="sent" className="space-y-4 pt-4">
+                  {sentFeaturesLoading ? (
+                    <div className="h-24 flex items-center justify-center bg-white rounded-xl">
+                      <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                    </div>
+                  ) : sentRequests && sentRequests.length > 0 ? (
+                    sentRequests.map((req: any) => (
+                      <Card key={req.id} className="border-none shadow-sm hover:shadow-md transition-shadow">
+                        <CardContent className="p-4 space-y-4">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-4">
+                              <div className="h-10 w-10 rounded-full bg-accent/10 flex items-center justify-center">
+                                <Sparkles className="h-5 w-5 text-accent" />
+                              </div>
+                              <div>
+                                <h4 className="font-bold text-sm">To: {req.targetName || 'Artist'}</h4>
+                                <p className="text-[10px] text-muted-foreground">{new Date(req.createdAt?.seconds * 1000).toLocaleDateString()}</p>
+                              </div>
+                            </div>
+                            <Badge variant={req.status === 'Accepted' ? 'default' : req.status === 'Rejected' ? 'destructive' : 'secondary'} className="text-[10px]">
+                              {req.status}
+                            </Badge>
+                          </div>
+                          <div className="flex justify-end gap-2">
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              className="h-8 text-destructive hover:bg-destructive/10"
+                              onClick={() => setRequestToDelete({ id: req.id, targetId: req.targetId, isSent: true })}
+                            >
+                              <Trash2 className="h-3 w-3 mr-1" /> Delete
+                            </Button>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))
+                  ) : (
+                    <p className="text-sm text-muted-foreground italic text-center py-4 bg-white rounded-xl border border-dashed">You haven't sent any feature requests.</p>
+                  )}
+                </TabsContent>
+              </Tabs>
             </section>
           </div>
         </div>
@@ -461,10 +519,17 @@ export default function ArtistDashboardPage() {
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction 
-              onClick={() => requestToDelete && handleDeleteFeature(requestToDelete)}
+              onClick={() => {
+                if (requestToDelete) {
+                  if (!requestToDelete.isSent && !rawFeatures?.find(r => r.id === requestToDelete.id)?.status?.includes('Accepted')) {
+                    handleUpdateFeatureStatus(requestToDelete.id, 'Rejected');
+                  }
+                  handleDeleteFeature(requestToDelete.id, requestToDelete.targetId, requestToDelete.isSent);
+                }
+              }}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              Delete
+              Confirm
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

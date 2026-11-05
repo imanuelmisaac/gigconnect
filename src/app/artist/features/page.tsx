@@ -1,10 +1,10 @@
 
 "use client"
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUser, useFirestore, useCollection, useDoc } from '@/firebase';
-import { collection, query, doc, setDoc, serverTimestamp, where } from 'firebase/firestore';
+import { collection, query, doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { 
   Loader2, 
   Search, 
@@ -13,12 +13,10 @@ import {
   ArrowLeft,
   Filter,
   Sparkles,
-  Users,
-  Send,
-  MessageCircle
+  Send
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -26,7 +24,6 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
-import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
@@ -62,7 +59,6 @@ export default function FindFeaturesPage() {
     if (!talent || !user) return [];
     
     return talent.filter((person: any) => {
-      // Don't show myself
       if (person.userId === user.uid) return false;
       if (!person.artistName && !person.fullName) return false;
 
@@ -87,6 +83,8 @@ export default function FindFeaturesPage() {
       senderName: myProfile.artistName || 'Unknown Artist',
       senderGenres: myProfile.genres || [],
       senderWhatsapp: myProfile.whatsappNumber || '',
+      targetId: targetArtist.userId,
+      targetName: targetArtist.artistName || 'Unknown',
       message: message,
       status: 'pending',
       createdAt: serverTimestamp(),
@@ -126,10 +124,14 @@ export default function FindFeaturesPage() {
     <div className="min-h-screen bg-secondary/10 py-12 px-4">
       <div className="max-w-7xl mx-auto space-y-8">
         <header className="space-y-4">
-          <Link href="/artist/dashboard" className="inline-flex items-center text-sm text-muted-foreground hover:text-primary transition-colors">
+          <Button 
+            variant="ghost" 
+            className="inline-flex items-center text-sm text-muted-foreground hover:text-primary transition-colors p-0"
+            onClick={() => router.push('/artist/dashboard')}
+          >
             <ArrowLeft className="mr-2 h-4 w-4" />
             Back to Dashboard
-          </Link>
+          </Button>
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             <div>
               <h1 className="text-4xl font-bold text-primary font-headline">Find Collaborations</h1>
@@ -175,7 +177,7 @@ export default function FindFeaturesPage() {
           <div className="lg:col-span-3">
             <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-6">
               {filteredTalent.map((person: any) => (person.featurePrice !== null && (
-                <Card key={person.id} className="border-none shadow-sm hover:shadow-md transition-all overflow-hidden flex flex-col group">
+                <Card key={person.userId} className="border-none shadow-sm hover:shadow-md transition-all overflow-hidden flex flex-col group">
                   <div className="h-20 bg-gradient-to-br from-primary to-accent opacity-80" />
                   <CardHeader className="relative pt-0 flex flex-col items-center">
                     <Avatar className="h-16 w-16 border-4 border-white shadow-md -mt-8 mb-2">
