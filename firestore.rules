@@ -10,8 +10,12 @@ service cloud.firestore {
     }
 
     // Helper: Is the user an admin?
+    // Added specific UID check as requested by owner
     function isAdmin() {
-      return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+      return isSignedIn() && (
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' || 
+        request.auth.uid == 'yZMHgaiCt2dmbqfOziWkc2t33th2'
+      );
     }
 
     // Helper: Is the user the owner of the document?

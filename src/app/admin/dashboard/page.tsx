@@ -14,7 +14,8 @@ import {
   serverTimestamp, 
   getDoc,
   writeBatch,
-  getDocs
+  getDocs,
+  setDoc
 } from 'firebase/firestore';
 import { 
   Loader2, 
@@ -32,7 +33,8 @@ import {
   LogOut,
   AlertTriangle,
   RefreshCcw,
-  ArrowUpDown
+  ArrowUpDown,
+  UserPlus
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -60,6 +62,9 @@ const TIER_OPTIONS = [
   { value: 'package4', label: 'Ultimate Pro (P80)' }
 ];
 
+// Specific admin UID provided by user
+const ADMIN_UID = 'yZMHgaiCt2dmbqfOziWkc2t33th2';
+
 export default function AdminDashboardPage() {
   const { user, loading: userLoading } = useUser();
   const db = useFirestore();
@@ -71,6 +76,7 @@ export default function AdminDashboardPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [userToDelete, setUserToDelete] = useState<any>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isSettingAdmin, setIsSettingAdmin] = useState(false);
 
   // Auth Protection
   const userDocRef = useMemo(() => user ? doc(db, 'users', user.uid) : null, [db, user]);
@@ -78,7 +84,15 @@ export default function AdminDashboardPage() {
 
   useEffect(() => {
     if (!userLoading && !profileLoading) {
-      if (!user || currentUserProfile?.role !== 'admin') {
+      if (!user) {
+        router.push('/login');
+        return;
+      }
+      
+      const isSystemAdmin = user.uid === ADMIN_UID;
+      const hasAdminRole = currentUserProfile?.role === 'admin';
+
+      if (!isSystemAdmin && !hasAdminRole) {
         router.push('/login');
       }
     }
@@ -124,6 +138,22 @@ export default function AdminDashboardPage() {
     toast({ title: "Artist Updated", description: `Tier updated to ${tier.toUpperCase()}` });
   };
 
+  const handleSetAdminRole = async () => {
+    if (!user) return;
+    setIsSettingAdmin(true);
+    try {
+      await setDoc(doc(db, 'users', user.uid), { 
+        role: 'admin',
+        updatedAt: serverTimestamp() 
+      }, { merge: true });
+      toast({ title: "Role Updated", description: "You now have the administrative role in the database." });
+    } catch (e: any) {
+      toast({ variant: "destructive", title: "Error", description: e.message });
+    } finally {
+      setIsSettingAdmin(false);
+    }
+  };
+
   const handleDeleteUser = async () => {
     if (!userToDelete) return;
     setIsDeleting(true);
@@ -135,9 +165,6 @@ export default function AdminDashboardPage() {
       await deleteDoc(doc(db, 'artists', uid));
       await deleteDoc(doc(db, 'gig-makers', uid));
       
-      // Note: Full cascading delete (events, apps, features) 
-      // is complex for client-side, but this hits the main targets.
-
       toast({ title: "User Deleted", description: "All profile documents removed." });
       setUserToDelete(null);
     } catch (e: any) {
@@ -182,9 +209,15 @@ export default function AdminDashboardPage() {
 
       <main className="flex-1 p-8 overflow-y-auto">
         <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
-          <div>
+          <div className="flex flex-col gap-2">
             <h1 className="text-3xl font-bold font-headline text-slate-900">Platform Manager</h1>
             <p className="text-muted-foreground">Human verification & content oversight</p>
+            {user?.uid === ADMIN_UID && currentUserProfile?.role !== 'admin' && (
+              <Button size="sm" variant="outline" className="w-fit gap-2 border-accent text-accent" onClick={handleSetAdminRole} disabled={isSettingAdmin}>
+                {isSettingAdmin ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserPlus className="h-4 w-4" />}
+                Claim Admin Role in Database
+              </Button>
+            )}
           </div>
           <div className="relative w-full md:max-w-xs">
             <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -240,7 +273,7 @@ export default function AdminDashboardPage() {
                         </div>
                       </div>
                       <div className="flex gap-2">
-                        {u.role !== 'admin' && (
+                        {u.role !== 'admin' && u.userId !== ADMIN_UID && (
                           <Button variant="ghost" size="sm" className="text-destructive" onClick={() => setUserToDelete(u)}>
                             <Trash2 className="h-4 w-4" />
                           </Button>

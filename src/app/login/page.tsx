@@ -16,6 +16,9 @@ import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
+// Specific admin UID provided by user
+const ADMIN_UID = 'yZMHgaiCt2dmbqfOziWkc2t33th2';
+
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -44,6 +47,13 @@ export default function LoginPage() {
 
       const userDocRef = doc(db, 'users', user.uid);
       const userDocSnap = await getDoc(userDocRef);
+
+      // Check for Admin Override
+      if (user.uid === ADMIN_UID) {
+        toast({ title: "Admin Login", description: "System administrator access granted." });
+        router.push('/admin/dashboard');
+        return;
+      }
 
       if (userDocSnap.exists()) {
         const userData = userDocSnap.data();
