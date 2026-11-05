@@ -1,4 +1,3 @@
-
 "use client"
 
 import { useState } from 'react';
@@ -11,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Briefcase, ArrowLeft, Loader2, KeyRound, Mail, RefreshCw, ShieldAlert } from 'lucide-react';
+import { Briefcase, ArrowLeft, Loader2, KeyRound, Mail, RefreshCw, AlertTriangle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -28,6 +27,7 @@ export default function LoginPage() {
   const [isResetDialogOpen, setIsResetDialogOpen] = useState(false);
   const [isUnverified, setIsUnverified] = useState(false);
   const [resending, setResending] = useState(false);
+  const [setupError, setSetupError] = useState<string | null>(null);
   
   const auth = useAuth();
   const db = useFirestore();
@@ -40,6 +40,7 @@ export default function LoginPage() {
 
     setLoading(true);
     setIsUnverified(false);
+    setSetupError(null);
     
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
@@ -95,11 +96,18 @@ export default function LoginPage() {
       }
     } catch (error: any) {
       console.error("Login Error:", error);
-      toast({
-        variant: "destructive",
-        title: "Login Error",
-        description: error.message || "Failed to login. Please check your credentials.",
-      });
+      
+      if (error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found') {
+        setSetupError("Account not found or incorrect password. Did you register a new account for GigConnect?");
+      } else if (error.message?.includes('400')) {
+        setSetupError("Firebase Setup Error: Ensure 'Email/Password' is ENABLED in the Firebase Console (Authentication > Sign-in method).");
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Login Error",
+          description: error.message || "Failed to login. Please check your credentials.",
+        });
+      }
     } finally {
       setLoading(false);
     }
@@ -172,6 +180,16 @@ export default function LoginPage() {
             <h1 className="text-3xl font-bold tracking-tight text-primary font-headline">Welcome Back</h1>
             <p className="text-muted-foreground">Enter your credentials to access your account</p>
           </div>
+
+          {setupError && (
+            <Alert variant="destructive" className="bg-red-50 border-red-200">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertTitle className="font-bold">Login Issue</AlertTitle>
+              <AlertDescription>
+                {setupError}
+              </AlertDescription>
+            </Alert>
+          )}
 
           {isUnverified && (
             <Alert variant="destructive" className="bg-destructive/10 border-destructive/20">

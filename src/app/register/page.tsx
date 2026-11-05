@@ -1,4 +1,3 @@
-
 "use client"
 
 import { useState } from 'react';
@@ -12,8 +11,9 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Briefcase, ArrowLeft, Loader2, Mail, CheckCircle2 } from 'lucide-react';
+import { Briefcase, ArrowLeft, Loader2, Mail, AlertTriangle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 export default function RegisterPage() {
   const [email, setEmail] = useState('');
@@ -23,6 +23,7 @@ export default function RegisterPage() {
   const [lastName, setLastName] = useState('');
   const [loading, setLoading] = useState(false);
   const [verificationSent, setVerificationSent] = useState(false);
+  const [setupError, setSetupError] = useState<string | null>(null);
   
   const auth = useAuth();
   const db = useFirestore();
@@ -34,6 +35,8 @@ export default function RegisterPage() {
     if (loading) return;
 
     setLoading(true);
+    setSetupError(null);
+
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
@@ -57,11 +60,16 @@ export default function RegisterPage() {
         description: "A verification email has been sent to your inbox.",
       });
     } catch (error: any) {
-      toast({
-        variant: "destructive",
-        title: "Registration Error",
-        description: error.message || "Failed to create account. Please try again.",
-      });
+      console.error("Registration Error:", error);
+      if (error.message?.includes('400')) {
+        setSetupError("Firebase Setup Error: Ensure 'Email/Password' is ENABLED in your Firebase Console (Authentication > Sign-in method).");
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Registration Error",
+          description: error.message || "Failed to create account. Please try again.",
+        });
+      }
     } finally {
       setLoading(false);
     }
@@ -121,6 +129,16 @@ export default function RegisterPage() {
             <h1 className="text-3xl font-bold tracking-tight text-primary font-headline">Create an Account</h1>
             <p className="text-muted-foreground">Join the global network of professionals</p>
           </div>
+
+          {setupError && (
+            <Alert variant="destructive" className="bg-red-50 border-red-200">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertTitle className="font-bold">Setup Required</AlertTitle>
+              <AlertDescription>
+                {setupError}
+              </AlertDescription>
+            </Alert>
+          )}
           
           <Card className="border-none shadow-xl">
             <form onSubmit={handleSubmit}>
