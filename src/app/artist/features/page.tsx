@@ -31,7 +31,7 @@ import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
 import Link from 'next/link';
 
-const GENRES = ["All Genres", "Kwaito", "Kwasa", "Amapiano", "Afrobeats", "Afropop", "Pop", "Rock", "Hip Hop", "Jazz", "Electronic", "R&B", "Reggae", "Other"];
+const GENRES = ["All Genres", "Motswako", "Amapiano", "Kwaito", "Kwasa Kwasa", "Afrobeats", "Afro-house", "Gqom", "Hip Hop", "Jazz", "Gospel", "RnB", "Reggae", "Dancehall", "Pop", "Rock", "Traditional", "Other"];
 
 const SUBSCRIPTION_LIMITS = {
   free: { features: 3, label: "Free Tier" },

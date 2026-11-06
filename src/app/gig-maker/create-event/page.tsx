@@ -21,8 +21,8 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 
 const GENRES = [
-  "Kwaito", "Kwasa", "Amapiano", "Afrobeats", "Afropop", "Pop", "Rock", "Hip Hop", "Jazz", "Classical", 
-  "Electronic", "R&B", "Country", "Reggae", "Folk", "Other"
+  "Motswako", "Amapiano", "Kwaito", "Kwasa Kwasa", "Afrobeats", "Afro-house", "Gqom", 
+  "Hip Hop", "Jazz", "Gospel", "RnB", "Reggae", "Dancehall", "Pop", "Rock", "Traditional", "Other"
 ];
 
 export default function CreateEventPage() {

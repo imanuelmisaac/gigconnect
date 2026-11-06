@@ -17,8 +17,8 @@ import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
 
 const GENRES = [
-  "Amapiano", "Afrobeats", "Afropop", "Pop", "Rock", "Hip Hop", "Jazz", "Classical", 
-  "Electronic", "R&B", "Country", "Reggae", "Folk"
+  "Motswako", "Amapiano", "Kwaito", "Kwasa Kwasa", "Afrobeats", "Afro-house", "Gqom", 
+  "Hip Hop", "Jazz", "Gospel", "RnB", "Reggae", "Dancehall", "Pop", "Rock", "Traditional", "Other"
 ];
 
 export default function EditEventPage() {
