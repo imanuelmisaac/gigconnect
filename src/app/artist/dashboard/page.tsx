@@ -424,7 +424,7 @@ export default function ArtistDashboardPage() {
                 <TabsContent value="received" className="pt-4 space-y-4">
                   {featuresLoading ? <Loader2 className="h-6 w-6 animate-spin mx-auto mt-4" /> : 
                     rawFeatures?.length ? rawFeatures.map((req: any) => (
-                      <Card key={req.id} className="border-none shadow-sm">
+                      <Card key={`${req.id}-received`} className="border-none shadow-sm">
                         <CardContent className="p-4 flex items-center justify-between gap-4">
                           <div className="flex items-center gap-3">
                              <Avatar className="h-8 w-8">
@@ -460,7 +460,7 @@ export default function ArtistDashboardPage() {
                 <TabsContent value="sent" className="pt-4 space-y-4">
                    {sentFeaturesLoading ? <Loader2 className="h-6 w-6 animate-spin mx-auto mt-4" /> : 
                     rawSentFeatures?.length ? rawSentFeatures.map((req: any) => (
-                      <Card key={`${req.id}-${req.targetId}`} className="border-none shadow-sm">
+                      <Card key={`${req.id}-${req.targetId}-sent`} className="border-none shadow-sm">
                         <CardContent className="p-4 flex items-center justify-between">
                           <div>
                             <p className="text-sm font-bold">To: {req.targetName}</p>

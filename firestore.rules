@@ -68,13 +68,14 @@ service cloud.firestore {
         );
 
         // Create: Artist can apply if event is Open and Payment is Complete
+        // applicationId MUST be request.auth.uid to enforce one-doc-per-user-per-event
         allow create: if isSignedIn() && 
           applicationId == request.auth.uid && 
           request.resource.data.artistId == request.auth.uid &&
           get(/databases/$(database)/documents/events/$(eventId)).data.status == 'Open' &&
           get(/databases/$(database)/documents/events/$(eventId)).data.paymentStatus == 'Complete';
 
-        // Update: Only the Gig Maker can update status
+        // Update: Only the Gig Maker can update status. Artists cannot edit applications once sent.
         allow update: if isSignedIn() && (
           request.auth.uid == get(/databases/$(database)/documents/events/$(eventId)).data.gigMakerId
         );
