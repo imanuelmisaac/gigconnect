@@ -99,7 +99,7 @@ export default function Home() {
             <span className="text-xl font-bold font-headline uppercase tracking-tighter">GigConnect</span>
           </div>
           <div className="space-y-2">
-            <p className="text-muted-foreground font-medium italic">"Made for Batswana by Motswana of Botswana"</p>
+            <p className="text-muted-foreground font-medium italic">"Made by a Motswana for Batswana in Botswana"</p>
             <p className="text-sm text-primary/70 font-bold">
               Mogakolodi Ranthokwane
             </p>
