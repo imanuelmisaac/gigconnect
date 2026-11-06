@@ -14,7 +14,7 @@ service cloud.firestore {
       return isSignedIn() && (
         request.auth.uid == 'rJq93j6Mi5NuAPEPNDYpLtSgFfc2' ||
         (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
-         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin')
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('role', '') == 'admin')
       );
     }
 
@@ -64,26 +64,30 @@ service cloud.firestore {
         // Read: Artist who applied or the Gig Maker who owns the event
         allow read: if isSignedIn() && (
           request.auth.uid == applicationId || 
-          request.auth.uid == get(/databases/$(database)/documents/events/$(eventId)).data.gigMakerId
+          (exists(/databases/$(database)/documents/events/$(eventId)) && 
+           request.auth.uid == get(/databases/$(database)/documents/events/$(eventId)).data.gigMakerId)
         );
 
-        // Create: Artist can apply if event is Open and Payment is Complete
+        // Create: Artist can apply if event is Open and Payment is not flagged as Incomplete
         // applicationId MUST be request.auth.uid to enforce one-doc-per-user-per-event
         allow create: if isSignedIn() && 
           applicationId == request.auth.uid && 
           request.resource.data.artistId == request.auth.uid &&
-          get(/databases/$(database)/documents/events/$(eventId)).data.status == 'Open' &&
-          get(/databases/$(database)/documents/events/$(eventId)).data.paymentStatus == 'Complete';
+          exists(/databases/$(database)/documents/events/$(eventId)) &&
+          get(/databases/$(database)/documents/events/$(eventId)).data.get('status', 'Open') == 'Open' &&
+          get(/databases/$(database)/documents/events/$(eventId)).data.get('paymentStatus', 'Complete') != 'Incomplete';
 
         // Update: Only the Gig Maker can update status. Artists cannot edit applications once sent.
         allow update: if isSignedIn() && (
+          exists(/databases/$(database)/documents/events/$(eventId)) &&
           request.auth.uid == get(/databases/$(database)/documents/events/$(eventId)).data.gigMakerId
         );
         
         // Delete: Gig Maker can delete, or Artist can delete ONLY if it's still 'pending'
         allow delete: if isSignedIn() && (
           (request.auth.uid == applicationId && resource.data.status == 'pending') || 
-          request.auth.uid == get(/databases/$(database)/documents/events/$(eventId)).data.gigMakerId ||
+          (exists(/databases/$(database)/documents/events/$(eventId)) && 
+           request.auth.uid == get(/databases/$(database)/documents/events/$(eventId)).data.gigMakerId) ||
           isAdmin()
         );
       }
