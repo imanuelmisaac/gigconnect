@@ -175,7 +175,7 @@ export default function ArtistEventsPage() {
           path: appRef.path,
           operation: 'create',
           requestResourceData: applicationData,
-        }));
+        } satisfies SecurityRuleContext));
       })
       .finally(() => setSubmitting(false));
   };

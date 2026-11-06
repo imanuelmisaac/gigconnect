@@ -12,14 +12,9 @@ service cloud.firestore {
     // Helper: Is the user an admin?
     function isAdmin() {
       return isSignedIn() && (
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' || 
-        request.auth.uid == 'rJq93j6Mi5NuAPEPNDYpLtSgFfc2'
+        request.auth.uid == 'rJq93j6Mi5NuAPEPNDYpLtSgFfc2' ||
+        get(/databases/(default)/documents/users/$(request.auth.uid)).data.role == 'admin'
       );
-    }
-
-    // Helper: Is the user the owner of the document?
-    function isOwner(userId) {
-      return request.auth.uid == userId;
     }
 
     // Master Override for Admins
@@ -29,39 +24,39 @@ service cloud.firestore {
 
     // Users Collection
     match /users/{userId} {
-      allow read, write: if isSignedIn() && isOwner(userId);
+      allow read, write: if isSignedIn() && request.auth.uid == userId;
     }
 
     // Artists/DJs Collection
     match /artists/{artistId} {
       allow read: if isSignedIn();
-      allow write: if isSignedIn() && isOwner(artistId);
+      allow write: if isSignedIn() && request.auth.uid == artistId;
 
       // Feature Requests sub-collection
-      match /features/{senderId} {
+      match /features/{requestId} {
         // Read: Target artist or the sender
-        allow read: if isSignedIn() && (isOwner(artistId) || isOwner(senderId));
+        allow read: if isSignedIn() && (request.auth.uid == artistId || request.auth.uid == resource.data.senderId);
         
         // Create: Only the sender
-        allow create: if isSignedIn() && isOwner(senderId);
+        allow create: if isSignedIn() && request.auth.uid == request.resource.data.senderId;
         
         // Update: Both (Target accepts/rejects, Sender might update message)
-        allow update: if isSignedIn() && (isOwner(artistId) || isOwner(senderId));
+        allow update: if isSignedIn() && (request.auth.uid == artistId || request.auth.uid == resource.data.senderId);
         
         // Delete: Both
-        allow delete: if isSignedIn() && (isOwner(artistId) || isOwner(senderId));
+        allow delete: if isSignedIn() && (request.auth.uid == artistId || request.auth.uid == resource.data.senderId);
       }
     }
 
     // Allow collection group queries for features (needed for "Sent Requests" tab)
     match /{path=**}/features/{senderId} {
-      allow read, list: if isSignedIn() && isOwner(senderId);
+      allow read, list: if isSignedIn() && request.auth.uid == senderId;
     }
 
     // Gig Makers Collection
     match /gig-makers/{userId} {
       allow read: if isSignedIn();
-      allow write: if isSignedIn() && isOwner(userId);
+      allow write: if isSignedIn() && request.auth.uid == userId;
     }
 
     // Events Collection
@@ -74,26 +69,26 @@ service cloud.firestore {
       match /applications/{applicationId} {
         // Read: Artist who applied or the Gig Maker who owns the event
         allow read: if isSignedIn() && (
-          isOwner(applicationId) || 
-          isOwner(get(/databases/$(database)/documents/events/$(eventId)).data.gigMakerId)
+          request.auth.uid == applicationId || 
+          request.auth.uid == get(/databases/(default)/documents/events/$(eventId)).data.gigMakerId
         );
 
         // Create: Artist can apply if event is Open and Payment is Complete
         allow create: if isSignedIn() && 
-          isOwner(applicationId) && 
+          applicationId == request.auth.uid && 
           request.resource.data.artistId == request.auth.uid &&
-          get(/databases/$(database)/documents/events/$(eventId)).data.status == 'Open' &&
-          get(/databases/$(database)/documents/events/$(eventId)).data.paymentStatus == 'Complete';
+          get(/databases/(default)/documents/events/$(eventId)).data.status == 'Open' &&
+          get(/databases/(default)/documents/events/$(eventId)).data.paymentStatus == 'Complete';
 
         // Update: Only the Gig Maker can update status (Artists cannot re-apply/edit)
         allow update: if isSignedIn() && (
-          isOwner(get(/databases/$(database)/documents/events/$(eventId)).data.gigMakerId)
+          request.auth.uid == get(/databases/(default)/documents/events/$(eventId)).data.gigMakerId
         );
         
         // Delete: Gig Maker can delete, or Artist can delete ONLY if it's still 'pending'
         allow delete: if isSignedIn() && (
-          (isOwner(applicationId) && resource.data.status == 'pending') || 
-          isOwner(get(/databases/$(database)/documents/events/$(eventId)).data.gigMakerId) ||
+          (request.auth.uid == applicationId && resource.data.status == 'pending') || 
+          request.auth.uid == get(/databases/(default)/documents/events/$(eventId)).data.gigMakerId ||
           isAdmin()
         );
       }
@@ -101,7 +96,7 @@ service cloud.firestore {
     
     // Allow collection group queries for applications (needed for Artist Dashboard)
     match /{path=**}/applications/{applicationId} {
-      allow read, list: if isSignedIn() && isOwner(applicationId);
+      allow read, list: if isSignedIn() && request.auth.uid == applicationId;
     }
   }
 }
