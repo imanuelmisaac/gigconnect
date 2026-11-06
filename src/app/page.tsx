@@ -75,7 +75,7 @@ export default function Home() {
                 },
                 {
                   icon: <Globe className="h-10 w-10 text-accent" />,
-                  title: "Umlazi Nation Spirit",
+                  title: "Bodiragatsi Spirit",
                   description: "Rooted in the excellence and creative drive of our local communities."
                 }
               ].map((feature, i) => (
