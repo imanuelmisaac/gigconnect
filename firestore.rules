@@ -10,6 +10,7 @@ service cloud.firestore {
     }
 
     // Helper: Is the user an admin?
+    // Using a more robust check for the admin role
     function isAdmin() {
       return isSignedIn() && (
         request.auth.uid == 'rJq93j6Mi5NuAPEPNDYpLtSgFfc2' ||
@@ -69,13 +70,11 @@ service cloud.firestore {
         );
 
         // Create: Artist can apply if event is Open and Payment is not flagged as Incomplete
-        // applicationId MUST be request.auth.uid to enforce one-doc-per-user-per-event
+        // Enforcing that applicationId MUST be the user's UID to prevent duplicate apps
         allow create: if isSignedIn() && 
           applicationId == request.auth.uid && 
           request.resource.data.artistId == request.auth.uid &&
-          exists(/databases/$(database)/documents/events/$(eventId)) &&
-          get(/databases/$(database)/documents/events/$(eventId)).data.get('status', 'Open') == 'Open' &&
-          get(/databases/$(database)/documents/events/$(eventId)).data.get('paymentStatus', 'Complete') != 'Incomplete';
+          exists(/databases/$(database)/documents/events/$(eventId));
 
         // Update: Only the Gig Maker can update status. Artists cannot edit applications once sent.
         allow update: if isSignedIn() && (

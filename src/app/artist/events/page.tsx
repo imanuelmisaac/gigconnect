@@ -113,7 +113,7 @@ export default function ArtistEventsPage() {
     if (!rawEvents || !rawApps) return rawEvents || [];
     return [...rawEvents].map(event => ({
       ...event,
-      hasApplied: rawApps.some((app: any) => app.eventId === event.eventId || app.eventId === event.id)
+      hasApplied: rawApps.some((app: any) => app.eventId === event.id || app.eventId === event.eventId)
     })).sort((a: any, b: any) => {
       const dateA = a.date || '';
       const dateB = b.date || '';
