@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUser, useFirestore } from '@/firebase';
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
@@ -12,6 +12,22 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Briefcase, MapPin, MessageCircle, Building2, Loader2, ArrowRight } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+
+const COUNTRY_FLAGS: Record<string, string> = {
+  '+267': '🇧🇼',
+  '+27': '🇿🇦',
+  '+254': '🇰🇪',
+  '+234': '🇳🇬',
+  '+263': '🇿🇼',
+  '+260': '🇿🇲',
+  '+244': '🇦🇴',
+  '+255': '🇹🇿',
+  '+256': '🇺🇬',
+  '+264': '🇳🇦',
+  '+268': '🇸🇿',
+  '+266': '🇱🇸',
+  '+233': '🇬🇭',
+};
 
 export default function GigMakerSetupPage() {
   const { user, loading: userLoading } = useUser();
@@ -27,6 +43,22 @@ export default function GigMakerSetupPage() {
     whatsappNumber: '',
   });
 
+  // Detect flag based on phone number
+  const detectedFlag = useMemo(() => {
+    const phone = formData.whatsappNumber;
+    if (!phone.startsWith('+')) return null;
+    
+    // Check for 4-char prefixes first (+267, +234, etc)
+    const prefix4 = phone.substring(0, 4);
+    if (COUNTRY_FLAGS[prefix4]) return COUNTRY_FLAGS[prefix4];
+    
+    // Then 3-char prefixes (+27)
+    const prefix3 = phone.substring(0, 3);
+    if (COUNTRY_FLAGS[prefix3]) return COUNTRY_FLAGS[prefix3];
+    
+    return null;
+  }, [formData.whatsappNumber]);
+
   useEffect(() => {
     if (!userLoading && !user) {
       router.push('/login');
@@ -36,6 +68,12 @@ export default function GigMakerSetupPage() {
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { id, value } = e.target;
     setFormData((prev) => ({ ...prev, [id]: value }));
+  };
+
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    // Only allow + and numbers
+    const value = e.target.value.replace(/[^0-9+]/g, '');
+    setFormData(prev => ({ ...prev, whatsappNumber: value }));
   };
 
   const handleSelectChange = (value: string) => {
@@ -161,14 +199,20 @@ export default function GigMakerSetupPage() {
               <div className="space-y-2">
                 <Label htmlFor="whatsappNumber">WhatsApp Number</Label>
                 <div className="relative">
-                  <MessageCircle className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <div className="absolute left-3 top-3 flex items-center gap-2 text-muted-foreground">
+                    {detectedFlag ? (
+                      <span className="text-lg leading-none">{detectedFlag}</span>
+                    ) : (
+                      <MessageCircle className="h-4 w-4" />
+                    )}
+                  </div>
                   <Input 
                     id="whatsappNumber" 
-                    placeholder="+254..." 
+                    placeholder="+267..." 
                     className="pl-10 h-11"
                     required 
                     value={formData.whatsappNumber} 
-                    onChange={handleInputChange} 
+                    onChange={handlePhoneChange} 
                   />
                 </div>
               </div>

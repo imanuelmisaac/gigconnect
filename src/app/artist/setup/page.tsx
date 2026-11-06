@@ -12,7 +12,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Progress } from '@/components/ui/progress';
-import { Briefcase, Upload, Music, Video, User, Check, Loader2, AlertCircle, ArrowLeft } from 'lucide-react';
+import { Briefcase, Upload, Music, Video, User, Check, Loader2, AlertCircle, ArrowLeft, MessageSquare } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
 
@@ -20,6 +20,22 @@ const GENRES = [
   "Motswako", "Amapiano", "Kwaito", "Kwasa Kwasa", "Afrobeats", "Afro-house", "Gqom", 
   "Hip Hop", "Jazz", "Gospel", "RnB", "Reggae", "Dancehall", "Pop", "Rock", "Traditional", "Other"
 ];
+
+const COUNTRY_FLAGS: Record<string, string> = {
+  '+267': '🇧🇼',
+  '+27': '🇿🇦',
+  '+254': '🇰🇪',
+  '+234': '🇳🇬',
+  '+263': '🇿🇼',
+  '+260': '🇿🇲',
+  '+244': '🇦🇴',
+  '+255': '🇹🇿',
+  '+256': '🇺🇬',
+  '+264': '🇳🇦',
+  '+268': '🇸🇿',
+  '+266': '🇱🇸',
+  '+233': '🇬🇭',
+};
 
 export default function ArtistSetupPage() {
   const { user, loading: userLoading } = useUser();
@@ -55,6 +71,22 @@ export default function ArtistSetupPage() {
 
   const artistDocRef = useMemo(() => user ? doc(db, 'artists', user.uid) : null, [db, user]);
   const { data: artistProfile, loading: profileLoading } = useDoc(artistDocRef);
+
+  // Detect flag based on phone number
+  const detectedFlag = useMemo(() => {
+    const phone = formData.whatsappNumber;
+    if (!phone.startsWith('+')) return null;
+    
+    // Check for 4-char prefixes first (+267, +234, etc)
+    const prefix4 = phone.substring(0, 4);
+    if (COUNTRY_FLAGS[prefix4]) return COUNTRY_FLAGS[prefix4];
+    
+    // Then 3-char prefixes (+27)
+    const prefix3 = phone.substring(0, 3);
+    if (COUNTRY_FLAGS[prefix3]) return COUNTRY_FLAGS[prefix3];
+    
+    return null;
+  }, [formData.whatsappNumber]);
 
   // Prepopulate form data if it exists
   useEffect(() => {
@@ -120,6 +152,12 @@ export default function ArtistSetupPage() {
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { id, value } = e.target;
     setFormData(prev => ({ ...prev, [id]: value }));
+  };
+
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    // Only allow + and numbers
+    const value = e.target.value.replace(/[^0-9+]/g, '');
+    setFormData(prev => ({ ...prev, whatsappNumber: value }));
   };
 
   const handleGenreChange = (genre: string) => {
@@ -333,7 +371,23 @@ export default function ArtistSetupPage() {
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="whatsappNumber">WhatsApp Number</Label>
-                    <Input id="whatsappNumber" placeholder="+267..." required value={formData.whatsappNumber} onChange={handleInputChange} />
+                    <div className="relative">
+                      <div className="absolute left-3 top-2.5 flex items-center gap-2 text-muted-foreground">
+                        {detectedFlag ? (
+                          <span className="text-lg leading-none">{detectedFlag}</span>
+                        ) : (
+                          <MessageSquare className="h-4 w-4" />
+                        )}
+                      </div>
+                      <Input 
+                        id="whatsappNumber" 
+                        placeholder="+267..." 
+                        className="pl-10"
+                        required 
+                        value={formData.whatsappNumber} 
+                        onChange={handlePhoneChange} 
+                      />
+                    </div>
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="bookingPrice">Booking Price (P)</Label>
