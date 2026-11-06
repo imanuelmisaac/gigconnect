@@ -11,7 +11,8 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Briefcase, ArrowLeft, Loader2, Mail, AlertTriangle, Eye, EyeOff } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Briefcase, ArrowLeft, Loader2, Mail, AlertTriangle, Eye, EyeOff, ShieldCheck } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
@@ -22,6 +23,7 @@ export default function RegisterPage() {
   const [role, setRole] = useState<'artist' | 'gig-maker' | 'dj'>('artist');
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [loading, setLoading] = useState(false);
   const [verificationSent, setVerificationSent] = useState(false);
   const [setupError, setSetupError] = useState<string | null>(null);
@@ -33,7 +35,7 @@ export default function RegisterPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (loading) return;
+    if (loading || !agreedToTerms) return;
 
     setLoading(true);
     setSetupError(null);
@@ -128,7 +130,7 @@ export default function RegisterPage() {
               </div>
             </div>
             <h1 className="text-3xl font-bold tracking-tight text-primary font-headline">Create an Account</h1>
-            <p className="text-muted-foreground">Join the global network of professionals</p>
+            <p className="text-muted-foreground">Join the professional talent network</p>
           </div>
 
           {setupError && (
@@ -220,9 +222,28 @@ export default function RegisterPage() {
                     </button>
                   </div>
                 </div>
+
+                <div className="flex items-start space-x-3 pt-4 border-t">
+                  <Checkbox 
+                    id="terms" 
+                    checked={agreedToTerms} 
+                    onCheckedChange={(checked) => setAgreedToTerms(checked === true)}
+                  />
+                  <div className="grid gap-1.5 leading-none">
+                    <Label htmlFor="terms" className="text-xs font-medium cursor-pointer">
+                      I agree to the{" "}
+                      <Link href="/terms" target="_blank" className="text-accent hover:underline font-bold">
+                        Terms and Conditions
+                      </Link>
+                    </Label>
+                    <p className="text-[10px] text-muted-foreground">
+                      Including data residency in the USA.
+                    </p>
+                  </div>
+                </div>
               </CardContent>
               <CardFooter className="flex flex-col gap-4">
-                <Button type="submit" className="w-full h-11 bg-primary text-lg" disabled={loading}>
+                <Button type="submit" className="w-full h-11 bg-primary text-lg" disabled={loading || !agreedToTerms}>
                   {loading ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
