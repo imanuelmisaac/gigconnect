@@ -387,7 +387,7 @@ export default function ArtistDashboardPage() {
                   </div>
                 ) : rawApps && rawApps.length > 0 ? (
                   rawApps.slice(0, 5).map((app: any) => (
-                    <Card key={app.id} className="border-none shadow-sm hover:shadow-md transition-shadow">
+                    <Card key={`${app.id}-${app.eventId}`} className="border-none shadow-sm hover:shadow-md transition-shadow">
                       <CardContent className="p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                         <div className="flex items-center gap-4">
                           <div className="h-10 w-10 rounded-lg bg-secondary flex items-center justify-center text-primary font-bold">
@@ -459,7 +459,7 @@ export default function ArtistDashboardPage() {
                 <TabsContent value="sent" className="pt-4 space-y-4">
                    {sentFeaturesLoading ? <Loader2 className="h-6 w-6 animate-spin mx-auto mt-4" /> : 
                     rawSentFeatures?.length ? rawSentFeatures.map((req: any) => (
-                      <Card key={req.id} className="border-none shadow-sm">
+                      <Card key={`${req.id}-${req.targetId}`} className="border-none shadow-sm">
                         <CardContent className="p-4 flex items-center justify-between">
                           <div>
                             <p className="text-sm font-bold">To: {req.targetName}</p>
