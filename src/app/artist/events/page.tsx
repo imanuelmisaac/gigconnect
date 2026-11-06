@@ -1,4 +1,3 @@
-
 "use client"
 
 import { useMemo, useState, useEffect } from 'react';
@@ -55,6 +54,13 @@ export default function ArtistEventsPage() {
   const [proposedPrice, setProposedPrice] = useState('');
   const [message, setMessage] = useState('');
 
+  // Protect route
+  useEffect(() => {
+    if (!userLoading && !user) {
+      router.push('/login');
+    }
+  }, [user, userLoading, router]);
+
   const artistProfileRef = useMemo(() => {
     if (!db || !user) return null;
     return doc(db, 'artists', user.uid);
@@ -89,7 +95,7 @@ export default function ArtistEventsPage() {
 
   const tierKey = (artistProfile?.subscriptionTier as keyof typeof SUBSCRIPTION_LIMITS) || 'free';
   const limits = SUBSCRIPTION_LIMITS[tierKey];
-  const isLimitReached = monthlyAppCount >= limits.apps;
+  const isLimitReached = monthlyAppCount >= (limits?.apps || 0);
 
   const eventsQuery = useMemo(() => {
     if (!db) return null;
@@ -194,6 +200,8 @@ export default function ArtistEventsPage() {
     );
   }
 
+  if (!user) return null;
+
   return (
     <div className="min-h-screen bg-secondary/10 py-12 px-4">
       <div className="max-w-6xl mx-auto space-y-8">
@@ -209,7 +217,7 @@ export default function ArtistEventsPage() {
           <Card className="bg-white p-4 border-none shadow-sm flex items-center gap-4">
             <div className="text-right">
                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Monthly Quota</p>
-               <p className="text-xl font-black text-primary">{monthlyAppCount} / {limits.apps > 1000 ? '∞' : limits.apps}</p>
+               <p className="text-xl font-black text-primary">{monthlyAppCount} / {limits?.apps > 1000 ? '∞' : (limits?.apps || 0)}</p>
             </div>
             {isLimitReached && (
               <Link href="/artist/subscription">
@@ -284,7 +292,7 @@ export default function ArtistEventsPage() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Apply for {selectedEvent?.title}</DialogTitle>
-            <DialogDescription>Your monthly usage will be {monthlyAppCount + 1} / {limits.apps}.</DialogDescription>
+            <DialogDescription>Your monthly usage will be {monthlyAppCount + 1} / {limits?.apps > 1000 ? '∞' : (limits?.apps || 0)}.</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">

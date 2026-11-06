@@ -32,7 +32,7 @@ export default function Home() {
                     Join the Movement
                   </Button>
                 </Link>
-                <Link href="/login">
+                <Link href="/artist/events">
                   <Button size="lg" variant="outline" className="w-full sm:w-auto text-lg h-12 px-8">
                     Browse Gigs
                   </Button>
