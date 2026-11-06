@@ -1,4 +1,3 @@
-
 "use client"
 
 import { useEffect, useMemo, useState } from 'react';
@@ -432,7 +431,7 @@ export default function ArtistDashboardPage() {
                              </Avatar>
                              <div>
                                <p className="text-sm font-bold">{req.senderName}</p>
-                               <p className="text-[10px] text-muted-foreground">Status: {req.status}</p>
+                               <p className="text-[10px] text-muted-foreground">Status: <span className={req.status === 'Rejected' ? 'text-destructive font-bold' : ''}>{req.status}</span></p>
                              </div>
                           </div>
                           <div className="flex gap-2">
@@ -442,9 +441,14 @@ export default function ArtistDashboardPage() {
                                  <Button size="sm" variant="ghost" className="h-7 text-[10px] text-red-600" onClick={() => handleUpdateFeatureStatus(req.id, 'Rejected')}>Decline</Button>
                                </>
                              ) : (
-                               req.status === 'Accepted' && req.senderWhatsapp && (
-                                 <WhatsAppButton phoneNumber={req.senderWhatsapp} message="Hi, I've accepted your feature request!" size="sm" className="h-7 text-[10px]" />
-                               )
+                               <>
+                                 {req.status === 'Accepted' && req.senderWhatsapp && (
+                                   <WhatsAppButton phoneNumber={req.senderWhatsapp} message="Hi, I've accepted your feature request!" size="sm" className="h-7 text-[10px]" />
+                                 )}
+                                 <Button variant="ghost" size="sm" className="h-7 text-destructive" onClick={() => setRequestToDelete({ id: req.id, isSent: false })}>
+                                   <Trash2 className="h-3 w-3" />
+                                 </Button>
+                               </>
                              )}
                           </div>
                         </CardContent>
