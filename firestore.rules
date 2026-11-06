@@ -1,4 +1,3 @@
-
 rules_version = '2';
 
 service cloud.firestore {
@@ -10,7 +9,6 @@ service cloud.firestore {
     }
 
     // Helper: Is the user an admin?
-    // Using a robust check for the admin role
     function isAdmin() {
       return isSignedIn() && (
         request.auth.uid == 'rJq93j6Mi5NuAPEPNDYpLtSgFfc2' ||
@@ -34,18 +32,12 @@ service cloud.firestore {
       allow read: if isSignedIn();
       allow write: if isSignedIn() && request.auth.uid == artistId;
 
-      // Feature Requests sub-collection
       match /features/{requestId} {
         allow read: if isSignedIn() && (request.auth.uid == artistId || request.auth.uid == resource.data.senderId);
         allow create: if isSignedIn() && request.auth.uid == request.resource.data.senderId;
         allow update: if isSignedIn() && (request.auth.uid == artistId || request.auth.uid == resource.data.senderId);
         allow delete: if isSignedIn() && (request.auth.uid == artistId || request.auth.uid == resource.data.senderId);
       }
-    }
-
-    // Allow collection group queries for features
-    match /{path=**}/features/{senderId} {
-      allow read, list: if isSignedIn() && request.auth.uid == senderId;
     }
 
     // Gig Makers Collection
@@ -71,10 +63,13 @@ service cloud.firestore {
         );
 
         // Create: Artist can apply if they are signed in and the application ID is their own UID
-        // This implicitly prevents duplicate applications because document IDs are unique.
-        allow create: if isSignedIn() && request.auth.uid == applicationId;
+        // This implicitly prevents duplicate applications because document IDs are unique within the applications collection.
+        allow create: if isSignedIn() && 
+          request.auth.uid == applicationId &&
+          request.resource.data.artistId == request.auth.uid;
 
         // Update: Only the Gig Maker can update status (e.g., Accepting/Rejecting)
+        // Artists are explicitly forbidden from updating their own application once sent.
         allow update: if isSignedIn() && (
           (exists(/databases/$(database)/documents/events/$(eventId)) && 
            request.auth.uid == get(/databases/$(database)/documents/events/$(eventId)).data.gigMakerId) ||
@@ -91,9 +86,12 @@ service cloud.firestore {
       }
     }
     
-    // Allow collection group queries for applications
+    // Allow collection group queries
     match /{path=**}/applications/{applicationId} {
       allow read, list: if isSignedIn() && request.auth.uid == applicationId;
+    }
+    match /{path=**}/features/{senderId} {
+      allow read, list: if isSignedIn() && request.auth.uid == senderId;
     }
   }
 }

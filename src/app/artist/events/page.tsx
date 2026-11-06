@@ -1,4 +1,3 @@
-
 "use client"
 
 import { useMemo, useState, useEffect } from 'react';
@@ -154,7 +153,6 @@ export default function ArtistEventsPage() {
   const handleApplySubmit = async () => {
     if (!user || !db || !selectedEvent || !artistProfile) return;
     
-    // Ensure we have a valid event ID for the path
     const eventId = selectedEvent.id || selectedEvent.eventId;
     if (!eventId) {
       toast({ variant: "destructive", title: "Error", description: "Invalid event data." });
