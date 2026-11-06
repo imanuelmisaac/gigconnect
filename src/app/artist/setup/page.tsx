@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { useUser, useFirestore } from '@/firebase';
+import { useUser, useFirestore, useDoc } from '@/firebase';
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -12,8 +12,9 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Progress } from '@/components/ui/progress';
-import { Briefcase, Upload, Music, Video, User, Check, Loader2, AlertCircle } from 'lucide-react';
+import { Briefcase, Upload, Music, Video, User, Check, Loader2, AlertCircle, ArrowLeft } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import Link from 'next/link';
 
 const GENRES = [
   "Kwaito", "Kwasa", "Amapiano", "Afrobeats", "Afropop", "Pop", "Rock", "Hip Hop", "Jazz", "Classical", 
@@ -27,6 +28,8 @@ export default function ArtistSetupPage() {
   const { toast } = useToast();
 
   const [loading, setLoading] = useState(false);
+  const [isDataLoaded, setIsDataLoaded] = useState(false);
+  
   const [formData, setFormData] = useState({
     fullName: '',
     artistName: '',
@@ -50,6 +53,35 @@ export default function ArtistSetupPage() {
     profilePic: null,
   });
 
+  const artistDocRef = useMemo(() => user ? doc(db, 'artists', user.uid) : null, [db, user]);
+  const { data: artistProfile, loading: profileLoading } = useDoc(artistDocRef);
+
+  // Prepopulate form data if it exists
+  useEffect(() => {
+    if (artistProfile && !isDataLoaded) {
+      setFormData({
+        fullName: artistProfile.fullName || '',
+        artistName: artistProfile.artistName || '',
+        dob: artistProfile.dob || '',
+        idNumber: artistProfile.idNumber || '',
+        genres: artistProfile.genres || [],
+        location: artistProfile.location || '',
+        bio: artistProfile.bio || '',
+        bookingPrice: artistProfile.bookingPrice?.toString() || '',
+        featurePrice: artistProfile.featurePrice?.toString() || '',
+        whatsappNumber: artistProfile.whatsappNumber || '',
+        songLink1: artistProfile.songLinks?.[0] || '',
+        songLink2: artistProfile.songLinks?.[1] || '',
+        songLink3: artistProfile.songLinks?.[2] || '',
+        videoLink: artistProfile.videoLink || '',
+      });
+      setFiles({
+        profilePic: artistProfile.profilePictureUrl || null,
+      });
+      setIsDataLoaded(true);
+    }
+  }, [artistProfile, isDataLoaded]);
+
   const completionStats = useMemo(() => {
     const requiredFields = [
       formData.fullName,
@@ -66,7 +98,7 @@ export default function ArtistSetupPage() {
       files.profilePic
     ];
 
-    const filledFieldsCount = requiredFields.filter(field => field && field.trim().length > 0).length;
+    const filledFieldsCount = requiredFields.filter(field => field && field.toString().trim().length > 0).length;
     const filledFilesCount = requiredFiles.filter(file => file !== null).length;
     const genresFilled = formData.genres.length > 0 ? 1 : 0;
 
@@ -112,7 +144,6 @@ export default function ArtistSetupPage() {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
       
-      // Increased to 700KB for Firestore documents which have a 1MB limit
       if (file.size > 700 * 1024) {
         toast({
           variant: "destructive",
@@ -190,7 +221,7 @@ export default function ArtistSetupPage() {
     }
   };
 
-  if (userLoading) {
+  if (userLoading || profileLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="h-10 w-10 animate-spin text-primary" />
@@ -202,6 +233,14 @@ export default function ArtistSetupPage() {
     <div className="min-h-screen bg-secondary/10 py-12 px-4">
       <div className="max-w-4xl mx-auto space-y-8">
         
+        <div className="flex items-center justify-between">
+           <Link href="/artist/dashboard">
+            <Button variant="ghost" size="sm" className="gap-2">
+              <ArrowLeft className="h-4 w-4" /> Back to Dashboard
+            </Button>
+           </Link>
+        </div>
+
         <Card className="sticky top-4 z-20 border-primary/20 shadow-lg bg-background/95 backdrop-blur">
           <CardContent className="pt-6">
             <div className="flex items-center justify-between mb-2">
@@ -224,7 +263,9 @@ export default function ArtistSetupPage() {
               <User className="h-8 w-8" />
             </div>
           </div>
-          <h1 className="text-3xl font-bold tracking-tight text-primary font-headline">Profile Setup</h1>
+          <h1 className="text-3xl font-bold tracking-tight text-primary font-headline">
+            {isDataLoaded ? 'Edit Profile' : 'Profile Setup'}
+          </h1>
           <p className="text-muted-foreground text-lg">Tell us more about your craft to start getting gigs.</p>
         </div>
 
@@ -393,7 +434,7 @@ export default function ArtistSetupPage() {
                   </>
                 ) : (
                   <>
-                    {completionStats.isComplete ? 'Complete Setup' : 'Save Progress'}
+                    {completionStats.isComplete ? 'Save Profile' : 'Save Progress'}
                     {completionStats.isComplete ? <Check className="ml-2 h-5 w-5" /> : null}
                   </>
                 )}
