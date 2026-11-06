@@ -101,9 +101,7 @@ export default function Home() {
           <div className="space-y-2">
             <p className="text-muted-foreground font-medium italic">"Made for Batswana by Motswana of Botswana"</p>
             <p className="text-sm text-primary/70 font-bold">
-              Created by Mogakolodi Ranthokwane
-              <br />
-              <span className="text-xs font-normal">(also known as Trustin Hymn from Umlazi Nation)</span>
+              Mogakolodi Ranthokwane
             </p>
           </div>
           <div className="pt-8 border-t max-w-xs mx-auto">
