@@ -106,7 +106,7 @@ export default function ArtistEventsPage() {
     if (!rawEvents || !rawApps) return rawEvents || [];
     return [...rawEvents].map(event => ({
       ...event,
-      hasApplied: rawApps.some((app: any) => app.eventId === event.eventId)
+      hasApplied: rawApps.some((app: any) => app.eventId === event.eventId || app.eventId === event.id)
     })).sort((a: any, b: any) => {
       const dateA = a.date || '';
       const dateB = b.date || '';
@@ -143,14 +143,20 @@ export default function ArtistEventsPage() {
 
   const handleApplySubmit = async () => {
     if (!user || !db || !selectedEvent || !artistProfile) return;
-    if (isLimitReached || selectedEvent.hasApplied) return;
+    
+    // Ensure we have a valid event ID for the path
+    const eventId = selectedEvent.id || selectedEvent.eventId;
+    if (!eventId) {
+      toast({ variant: "destructive", title: "Error", description: "Invalid event data." });
+      return;
+    }
 
     setSubmitting(true);
 
-    const appRef = doc(db, 'events', selectedEvent.eventId, 'applications', user.uid);
+    const appRef = doc(db, 'events', eventId, 'applications', user.uid);
     const applicationData = {
       applicationId: user.uid,
-      eventId: selectedEvent.eventId,
+      eventId: eventId,
       artistId: user.uid,
       artistName: artistProfile.artistName || 'Unknown Artist',
       artistGenres: artistProfile.genres || [],
