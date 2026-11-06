@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useEffect, useMemo, useState } from 'react';
@@ -33,7 +34,10 @@ import {
   AlertTriangle,
   RefreshCcw,
   ArrowUpDown,
-  UserPlus
+  UserPlus,
+  UserMinus,
+  Mail,
+  ShieldAlert
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -53,6 +57,7 @@ import {
   AlertDialogHeader, 
   AlertDialogTitle 
 } from '@/components/ui/alert-dialog';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 const TIER_OPTIONS = [
   { value: 'free', label: 'Free Tier' },
@@ -61,7 +66,7 @@ const TIER_OPTIONS = [
   { value: 'package4', label: 'Ultimate Pro (P80)' }
 ];
 
-// Updated admin UID
+// System Admin UID
 const ADMIN_UID = 'rJq93j6Mi5NuAPEPNDYpLtSgFfc2';
 
 export default function AdminDashboardPage() {
@@ -159,12 +164,15 @@ export default function AdminDashboardPage() {
     const uid = userToDelete.userId;
 
     try {
-      // 1. Delete profiles
+      // Delete profiles across all possible collections
       await deleteDoc(doc(db, 'users', uid));
       await deleteDoc(doc(db, 'artists', uid));
       await deleteDoc(doc(db, 'gig-makers', uid));
       
-      toast({ title: "User Deleted", description: "All profile documents removed." });
+      toast({ 
+        title: "User Profile Removed", 
+        description: "Firestore records deleted. Note: You must manually delete the user from the Firebase Authentication console for full removal." 
+      });
       setUserToDelete(null);
     } catch (e: any) {
       toast({ variant: "destructive", title: "Error", description: e.message });
@@ -183,19 +191,32 @@ export default function AdminDashboardPage() {
 
   return (
     <div className="min-h-screen bg-secondary/10 flex">
+      {/* Sidebar */}
       <aside className="w-64 bg-slate-900 text-white hidden md:flex flex-col shrink-0">
         <div className="p-6 border-b border-white/10 flex items-center gap-2">
           <ShieldCheck className="h-6 w-6 text-accent" />
           <span className="text-xl font-bold font-headline text-white">Admin Console</span>
         </div>
         <nav className="flex-1 p-4 space-y-2">
-          <Button variant="ghost" className="w-full justify-start text-white hover:bg-white/10" onClick={() => setActiveTab('users')}>
+          <Button 
+            variant="ghost" 
+            className={`w-full justify-start text-white hover:bg-white/10 ${activeTab === 'users' ? 'bg-white/10' : ''}`} 
+            onClick={() => setActiveTab('users')}
+          >
             <Users className="mr-2 h-4 w-4" /> User Base
           </Button>
-          <Button variant="ghost" className="w-full justify-start text-white hover:bg-white/10" onClick={() => setActiveTab('events')}>
+          <Button 
+            variant="ghost" 
+            className={`w-full justify-start text-white hover:bg-white/10 ${activeTab === 'events' ? 'bg-white/10' : ''}`} 
+            onClick={() => setActiveTab('events')}
+          >
             <Building2 className="mr-2 h-4 w-4" /> Gig Oversight
           </Button>
-          <Button variant="ghost" className="w-full justify-start text-white hover:bg-white/10" onClick={() => setActiveTab('payments')}>
+          <Button 
+            variant="ghost" 
+            className={`w-full justify-start text-white hover:bg-white/10 ${activeTab === 'payments' ? 'bg-white/10' : ''}`} 
+            onClick={() => setActiveTab('payments')}
+          >
             <CreditCard className="mr-2 h-4 w-4" /> Subscriptions
           </Button>
         </nav>
@@ -206,11 +227,12 @@ export default function AdminDashboardPage() {
         </div>
       </aside>
 
+      {/* Main Content */}
       <main className="flex-1 p-8 overflow-y-auto">
         <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
           <div className="flex flex-col gap-2">
             <h1 className="text-3xl font-bold font-headline text-slate-900">Platform Manager</h1>
-            <p className="text-muted-foreground">Human verification & content oversight</p>
+            <p className="text-muted-foreground">User lifecycle & content moderation</p>
             {user?.uid === ADMIN_UID && currentUserProfile?.role !== 'admin' && (
               <Button size="sm" variant="outline" className="w-fit gap-2 border-accent text-accent" onClick={handleSetAdminRole} disabled={isSettingAdmin}>
                 {isSettingAdmin ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserPlus className="h-4 w-4" />}
@@ -221,37 +243,42 @@ export default function AdminDashboardPage() {
           <div className="relative w-full md:max-w-xs">
             <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input 
-              placeholder="Filter list..." 
-              className="pl-10" 
+              placeholder="Search users or events..." 
+              className="pl-10 h-11 border-none shadow-sm" 
               value={searchTerm} 
               onChange={(e) => setSearchTerm(e.target.value)} 
             />
           </div>
         </header>
 
+        {/* Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <Card className="bg-white border-none shadow-sm">
+          <Card className="bg-white border-none shadow-sm overflow-hidden">
+            <div className="h-1 bg-primary" />
             <CardContent className="p-6">
-               <p className="text-xs font-bold text-muted-foreground uppercase">Total Users</p>
-               <p className="text-3xl font-black">{users?.length || 0}</p>
+               <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Total Accounts</p>
+               <p className="text-3xl font-black mt-1">{users?.length || 0}</p>
             </CardContent>
           </Card>
-          <Card className="bg-white border-none shadow-sm">
+          <Card className="bg-white border-none shadow-sm overflow-hidden">
+            <div className="h-1 bg-blue-600" />
             <CardContent className="p-6">
-               <p className="text-xs font-bold text-muted-foreground uppercase">Artists</p>
-               <p className="text-3xl font-black text-blue-600">{artists?.length || 0}</p>
+               <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Talent Profiles</p>
+               <p className="text-3xl font-black text-blue-600 mt-1">{artists?.length || 0}</p>
             </CardContent>
           </Card>
-          <Card className="bg-white border-none shadow-sm">
+          <Card className="bg-white border-none shadow-sm overflow-hidden">
+            <div className="h-1 bg-accent" />
             <CardContent className="p-6">
-               <p className="text-xs font-bold text-muted-foreground uppercase">Gigs</p>
-               <p className="text-3xl font-black text-accent">{events?.length || 0}</p>
+               <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Active Gigs</p>
+               <p className="text-3xl font-black text-accent mt-1">{events?.length || 0}</p>
             </CardContent>
           </Card>
-          <Card className="bg-white border-none shadow-sm">
+          <Card className="bg-white border-none shadow-sm overflow-hidden">
+            <div className="h-1 bg-destructive" />
             <CardContent className="p-6">
-               <p className="text-xs font-bold text-muted-foreground uppercase">Incomplete Gigs</p>
-               <p className="text-3xl font-black text-destructive">{events?.filter((e: any) => e.paymentStatus === 'Incomplete').length || 0}</p>
+               <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Unpaid Listings</p>
+               <p className="text-3xl font-black text-destructive mt-1">{events?.filter((e: any) => e.paymentStatus === 'Incomplete').length || 0}</p>
             </CardContent>
           </Card>
         </div>
@@ -259,71 +286,125 @@ export default function AdminDashboardPage() {
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsContent value="users" className="space-y-4">
              <div className="grid gap-4">
-               {filteredUsers.map((u: any) => (
-                 <Card key={u.id} className="border-none shadow-sm overflow-hidden">
+               {filteredUsers.length > 0 ? filteredUsers.map((u: any) => (
+                 <Card key={u.id} className="border-none shadow-sm overflow-hidden hover:shadow-md transition-shadow">
                     <CardContent className="p-4 flex items-center justify-between">
                       <div className="flex items-center gap-4">
                         <Avatar className="h-10 w-10">
-                          <AvatarFallback>{u.firstName?.substring(0, 1)}</AvatarFallback>
+                          <AvatarFallback className="bg-primary/10 text-primary font-bold">
+                            {u.firstName?.substring(0, 1) || 'U'}
+                          </AvatarFallback>
                         </Avatar>
                         <div>
-                          <p className="font-bold">{u.firstName} {u.lastName}</p>
-                          <p className="text-xs text-muted-foreground">{u.email} • <span className="uppercase">{u.role}</span></p>
+                          <p className="font-bold text-sm">{u.firstName} {u.lastName}</p>
+                          <div className="flex items-center gap-2">
+                            <span className="text-[10px] text-muted-foreground flex items-center gap-1">
+                              <Mail className="h-2.5 w-2.5" /> {u.email}
+                            </span>
+                            <Badge variant="secondary" className="text-[9px] uppercase px-1.5 py-0">{u.role}</Badge>
+                          </div>
                         </div>
                       </div>
-                      <div className="flex gap-2">
+                      <div className="flex items-center gap-2">
                         {u.role !== 'admin' && u.userId !== ADMIN_UID && (
-                          <Button variant="ghost" size="sm" className="text-destructive" onClick={() => setUserToDelete(u)}>
-                            <Trash2 className="h-4 w-4" />
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="text-destructive hover:bg-destructive/10" 
+                            onClick={() => setUserToDelete(u)}
+                          >
+                            <UserMinus className="h-4 w-4" />
                           </Button>
+                        )}
+                        {u.role === 'admin' && (
+                           <ShieldCheck className="h-4 w-4 text-green-600 mr-2" />
                         )}
                       </div>
                     </CardContent>
                  </Card>
-               ))}
+               )) : (
+                 <div className="text-center py-20 bg-white rounded-xl shadow-sm border-dashed border-2">
+                   <Users className="h-10 w-10 text-muted-foreground/20 mx-auto mb-2" />
+                   <p className="text-sm text-muted-foreground">No users found matching "{searchTerm}"</p>
+                 </div>
+               )}
              </div>
           </TabsContent>
 
           <TabsContent value="events" className="space-y-4">
              <div className="grid gap-4">
-               {filteredEvents.map((e: any) => (
-                 <Card key={e.id} className="border-none shadow-sm">
+               {filteredEvents.length > 0 ? filteredEvents.map((e: any) => (
+                 <Card key={e.id} className="border-none shadow-sm hover:shadow-md transition-shadow">
                     <CardContent className="p-4 flex items-center justify-between">
                       <div className="flex items-center gap-4">
-                        <div className="h-10 w-10 bg-secondary rounded flex items-center justify-center"><Music className="h-5 w-5 text-primary" /></div>
+                        <div className="h-10 w-10 bg-secondary rounded-lg flex items-center justify-center">
+                          <Music className="h-5 w-5 text-primary" />
+                        </div>
                         <div>
-                          <p className="font-bold">{e.title}</p>
-                          <p className="text-xs text-muted-foreground">{e.location} • Status: <span className="font-bold">{e.paymentStatus}</span></p>
+                          <p className="font-bold text-sm">{e.title}</p>
+                          <div className="flex items-center gap-3">
+                            <span className="text-[10px] text-muted-foreground flex items-center gap-1">
+                              <Building2 className="h-2.5 w-2.5" /> {e.location}
+                            </span>
+                            <Badge 
+                              variant={e.paymentStatus === 'Complete' ? 'secondary' : 'destructive'} 
+                              className="text-[9px] uppercase px-1.5 py-0"
+                            >
+                              {e.paymentStatus}
+                            </Badge>
+                          </div>
                         </div>
                       </div>
                       <div className="flex gap-2">
                         {e.paymentStatus === 'Incomplete' ? (
-                          <Button size="sm" className="bg-green-600 hover:bg-green-700" onClick={() => handleUpdateEventPayment(e.id, 'Complete')}>Mark Complete</Button>
+                          <Button 
+                            size="sm" 
+                            className="bg-green-600 hover:bg-green-700 text-white font-bold text-[10px] h-8" 
+                            onClick={() => handleUpdateEventPayment(e.id, 'Complete')}
+                          >
+                            Approve
+                          </Button>
                         ) : (
-                          <Button size="sm" variant="outline" className="text-destructive" onClick={() => handleUpdateEventPayment(e.id, 'Incomplete')}>Flag Incomplete</Button>
+                          <Button 
+                            size="sm" 
+                            variant="outline" 
+                            className="text-destructive border-destructive/20 hover:bg-destructive/10 text-[10px] h-8" 
+                            onClick={() => handleUpdateEventPayment(e.id, 'Incomplete')}
+                          >
+                            Flag Unpaid
+                          </Button>
                         )}
                       </div>
                     </CardContent>
                  </Card>
-               ))}
+               )) : (
+                 <div className="text-center py-20 bg-white rounded-xl shadow-sm border-dashed border-2">
+                   <Music className="h-10 w-10 text-muted-foreground/20 mx-auto mb-2" />
+                   <p className="text-sm text-muted-foreground">No gigs found matching "{searchTerm}"</p>
+                 </div>
+               )}
              </div>
           </TabsContent>
 
           <TabsContent value="payments" className="space-y-4">
              <div className="grid gap-4">
-               {artists?.map((artist: any) => (
+               {artists?.length ? artists.map((artist: any) => (
                  <Card key={artist.id} className="border-none shadow-sm">
                     <CardContent className="p-4 flex flex-col md:flex-row items-center justify-between gap-4">
                       <div className="flex items-center gap-4">
-                        <Avatar className="h-12 w-12 border-2 border-primary/10">
+                        <Avatar className="h-12 w-12 border-2 border-primary/10 shadow-sm">
                           <AvatarImage src={artist.profilePictureUrl} />
-                          <AvatarFallback>{artist.artistName?.substring(0, 2)}</AvatarFallback>
+                          <AvatarFallback className="bg-secondary text-primary font-bold">
+                            {artist.artistName?.substring(0, 2).toUpperCase()}
+                          </AvatarFallback>
                         </Avatar>
                         <div>
-                          <p className="font-bold">{artist.artistName}</p>
-                          <div className="flex items-center gap-2">
-                            <Badge variant="outline" className="text-[10px] uppercase">{artist.subscriptionTier || 'free'}</Badge>
-                            <span className="text-xs text-muted-foreground">{artist.whatsappNumber}</span>
+                          <p className="font-bold text-sm">{artist.artistName}</p>
+                          <div className="flex items-center gap-2 mt-1">
+                            <Badge variant="outline" className="text-[9px] uppercase font-black tracking-widest text-primary border-primary/20">
+                              {artist.subscriptionTier || 'free'}
+                            </Badge>
+                            <span className="text-[10px] text-muted-foreground">{artist.whatsappNumber}</span>
                           </div>
                         </div>
                       </div>
@@ -333,7 +414,7 @@ export default function AdminDashboardPage() {
                           defaultValue={artist.subscriptionTier || 'free'} 
                           onValueChange={(val) => handleUpdateArtistTier(artist.id, val)}
                         >
-                          <SelectTrigger className="w-[180px] h-9">
+                          <SelectTrigger className="w-[180px] h-9 text-xs">
                             <SelectValue placeholder="Update Tier" />
                           </SelectTrigger>
                           <SelectContent>
@@ -345,24 +426,43 @@ export default function AdminDashboardPage() {
                       </div>
                     </CardContent>
                  </Card>
-               ))}
+               )) : <p className="text-center text-sm text-muted-foreground py-10">No artist profiles found.</p>}
              </div>
           </TabsContent>
         </Tabs>
       </main>
 
+      {/* Delete User Confirmation */}
       <AlertDialog open={!!userToDelete} onOpenChange={(open) => !open && setUserToDelete(null)}>
-        <AlertDialogContent>
+        <AlertDialogContent className="max-w-md">
           <AlertDialogHeader>
-            <AlertDialogTitle>Permanent Deletion</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete <strong>{userToDelete?.firstName}</strong>? This action will remove their primary profile and professional data.
+            <div className="flex justify-center mb-4">
+               <div className="bg-destructive/10 p-3 rounded-full">
+                 <ShieldAlert className="h-8 w-8 text-destructive" />
+               </div>
+            </div>
+            <AlertDialogTitle className="text-center">Confirm Platform Removal</AlertDialogTitle>
+            <AlertDialogDescription className="text-center">
+              Are you sure you want to delete <strong>{userToDelete?.firstName} {userToDelete?.lastName}</strong>?
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteUser} className="bg-destructive text-white" disabled={isDeleting}>
-              {isDeleting ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Delete User'}
+          <div className="py-4">
+            <Alert variant="destructive" className="bg-destructive/5 border-destructive/20 text-destructive text-[11px]">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertTitle className="font-bold uppercase tracking-wider">Warning</AlertTitle>
+              <AlertDescription>
+                This will wipe their Firestore profile data. <strong>You must also manually delete them from the Firebase Auth Console</strong> to prevent them from logging back in.
+              </AlertDescription>
+            </Alert>
+          </div>
+          <AlertDialogFooter className="grid grid-cols-2 gap-2">
+            <AlertDialogCancel className="mt-0">Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleDeleteUser} 
+              className="bg-destructive text-white hover:bg-destructive/90 font-bold" 
+              disabled={isDeleting}
+            >
+              {isDeleting ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Confirm Wipe'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
