@@ -1,4 +1,3 @@
-
 import Link from 'next/link';
 import { Navbar } from '@/components/navbar';
 import { Button } from '@/components/ui/button';
@@ -19,7 +18,7 @@ export default function Home() {
             <div className="space-y-8 slide-up">
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-bold uppercase tracking-wider">
                 <Star className="h-3 w-3" />
-                Made for Batswana by Motswana
+                Made by Motswana for Batswana
               </div>
               <h1 className="text-5xl lg:text-6xl font-extrabold tracking-tight text-primary leading-tight font-headline">
                 Empowering <span className="text-accent">Batswana</span> Talent Everywhere
