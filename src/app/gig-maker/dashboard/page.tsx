@@ -14,12 +14,10 @@ import {
   LogOut, 
   Building2, 
   Users, 
-  ClipboardList,
   CheckCircle,
   Clock,
   MapPin,
   Search,
-  AlertCircle,
   Edit,
   Trash2,
   AlertTriangle,
@@ -31,7 +29,6 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { 
   AlertDialog, 
   AlertDialogAction, 
@@ -114,7 +111,7 @@ export default function GigMakerDashboardPage() {
   }, [user, userLoading, router, auth, toast]);
 
   useEffect(() => {
-    if (!events || events.length === 0 || !db || cleanupPerformed.current) return;
+    if (!user || !events || events.length === 0 || !db || cleanupPerformed.current) return;
 
     const cleanupOldEvents = async () => {
       const now = new Date();
@@ -149,7 +146,6 @@ export default function GigMakerDashboardPage() {
             await deleteDoc(eventRef);
             deletedCount++;
           } catch (e: any) {
-            console.error(`Cleanup failed for ${docId}:`, e);
             processingCleanup.current.delete(docId);
           }
         }
@@ -162,7 +158,7 @@ export default function GigMakerDashboardPage() {
     };
 
     cleanupOldEvents();
-  }, [events, db, toast]);
+  }, [user, events, db, toast]);
 
   const handleDeleteEvent = async () => {
     if (!eventToDelete || !db) return;
@@ -178,7 +174,7 @@ export default function GigMakerDashboardPage() {
       }
       const eventRef = doc(db, 'events', eventId);
       await deleteDoc(eventRef);
-      toast({ title: "Event Deleted", description: `"${eventToDelete.title}" has been removed from the platform.` });
+      toast({ title: "Event Deleted", description: `"${eventToDelete.title}" has been removed.` });
       setEventToDelete(null);
     } catch (e: any) {
       errorEmitter.emit('permission-error', new FirestorePermissionError({
@@ -190,7 +186,7 @@ export default function GigMakerDashboardPage() {
     }
   };
 
-  if (userLoading || profileLoading) {
+  if (userLoading || profileLoading || eventsLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-secondary/10">
         <Loader2 className="h-10 w-10 animate-spin text-primary" />
@@ -203,7 +199,7 @@ export default function GigMakerDashboardPage() {
       <aside className="w-64 bg-primary text-white hidden md:flex flex-col shrink-0">
         <div className="p-6 border-b border-white/10 flex items-center gap-2">
           <Building2 className="h-6 w-6 text-accent" />
-          <span className="text-xl font-bold font-headline text-white">GigConnect</span>
+          <span className="text-xl font-bold font-headline text-white uppercase tracking-tighter">GigConnect</span>
         </div>
         <nav className="flex-1 p-4 space-y-2">
           <Button variant="ghost" className="w-full justify-start text-white hover:bg-white/10 bg-white/5">
@@ -219,10 +215,7 @@ export default function GigMakerDashboardPage() {
           </Button>
         </nav>
         <div className="p-4 border-t border-white/10">
-           <Button variant="ghost" className="w-full justify-start text-white hover:bg-white/10" onClick={() => {
-             auth.signOut();
-             toast({ title: "Logged Out", description: "Business session ended." });
-           }}>
+           <Button variant="ghost" className="w-full justify-start text-white hover:bg-white/10" onClick={() => auth.signOut()}>
             <LogOut className="mr-2 h-4 w-4" /> Logout
           </Button>
         </div>
@@ -231,7 +224,7 @@ export default function GigMakerDashboardPage() {
       <main className="flex-1 p-8 overflow-y-auto">
         <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
           <div>
-            <h1 className="text-3xl font-bold font-headline text-primary">Business Console</h1>
+            <h1 className="text-3xl font-bold font-headline text-primary uppercase">Business Console</h1>
             <p className="text-muted-foreground">{profile?.businessName || 'Your Business'}</p>
           </div>
           <div className="flex gap-2">
@@ -272,7 +265,7 @@ export default function GigMakerDashboardPage() {
             </div>
 
             <section className="space-y-4">
-              <h3 className="text-xl font-bold font-headline text-primary">Event Management</h3>
+              <h3 className="text-xl font-bold font-headline text-primary uppercase">Event Management</h3>
               <div className="grid gap-4">
                 {events && events.length > 0 ? events.map((event: any) => (
                     <Card key={event.id} className="border-none shadow-sm group overflow-hidden">
@@ -300,7 +293,7 @@ export default function GigMakerDashboardPage() {
                           <Link href={`/gig-maker/events/${event.id}/edit`}>
                             <Button variant="ghost" size="sm" className="gap-1 h-8"><Edit className="h-3 w-3" /> Edit</Button>
                           </Link>
-                          <Button variant="ghost" size="sm" className="text-destructive h-8" onClick={() => setEventToDelete({ id: event.id, title: event.title })}><Trash2 className="h-3 w-3" /></Button>
+                          <Button variant="ghost" size="sm" className="text-destructive h-8" onClick={() => setEventToDelete({ id: event.id, title: event.title })} aria-label="Delete Event"><Trash2 className="h-3 w-3" /></Button>
                         </div>
                       </CardContent>
                     </Card>
@@ -351,7 +344,7 @@ export default function GigMakerDashboardPage() {
                   <p className="text-[10px] text-center text-muted-foreground py-4">Seeking featured talent...</p>
                 )}
                 <Link href="/gig-maker/artists">
-                  <Button variant="ghost" className="w-full text-[10px] font-bold text-accent mt-2">View All Marketplace Talent</Button>
+                  <Button variant="ghost" className="w-full text-[10px] font-bold text-accent mt-2">View All Talent</Button>
                 </Link>
               </CardContent>
             </Card>
@@ -359,11 +352,11 @@ export default function GigMakerDashboardPage() {
             <Card className="border-none shadow-md bg-primary text-white overflow-hidden relative group">
               <div className="absolute right-0 top-0 h-full w-1/3 opacity-10 group-hover:scale-110 transition-transform"><Sparkles className="h-full w-full rotate-12" /></div>
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm">Need Help?</CardTitle>
-                <CardDescription className="text-white/70 text-[10px]">Direct Admin Support</CardDescription>
+                <CardTitle className="text-sm">Support Hub</CardTitle>
+                <CardDescription className="text-white/70 text-[10px]">Direct Admin Messaging</CardDescription>
               </CardHeader>
               <CardContent>
-                <WhatsAppButton phoneNumber="+26774266208" message="Hi Admin, I need help with my GigConnect business console." size="sm" className="w-full bg-white text-primary border-none font-bold text-[10px]">Contact Admin</WhatsAppButton>
+                <WhatsAppButton phoneNumber="+26774266208" message="Hi Admin, I need assistance with my GigConnect business console." size="sm" className="w-full bg-white text-primary border-none font-bold text-[10px]">Message Support</WhatsAppButton>
               </CardContent>
             </Card>
           </aside>

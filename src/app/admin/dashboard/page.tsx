@@ -31,9 +31,7 @@ import {
   Save,
   CheckCircle2,
   AlertTriangle,
-  XCircle,
-  MoreVertical,
-  ChevronRight
+  XCircle
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
@@ -357,6 +355,7 @@ export default function AdminDashboardPage() {
                                 size="sm" 
                                 className="text-destructive hover:bg-destructive/10 h-8" 
                                 onClick={() => setUserToDelete(u)}
+                                aria-label="Delete User"
                               >
                                 <UserMinus className="h-4 w-4" />
                               </Button>
