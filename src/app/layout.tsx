@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import { FirebaseClientProvider } from '@/firebase';
 import { Toaster } from '@/components/ui/toaster';
+import { ObservabilityListener } from '@/components/observability-listener';
 
 export const viewport: Viewport = {
   width: 'device-width',
@@ -73,6 +74,7 @@ export default function RootLayout({
       </head>
       <body className="font-body antialiased min-h-screen bg-background">
         <FirebaseClientProvider>
+          <ObservabilityListener />
           {children}
           <Toaster />
         </FirebaseClientProvider>
