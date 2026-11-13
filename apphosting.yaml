@@ -2,6 +2,17 @@
 # https://firebase.google.com/docs/app-hosting/configure
 
 runConfig:
-  # Increase this value if you'd like to automatically spin up
-  # more instances in response to increased traffic.
-  maxInstances: 1
+  # Standard production specs for Botswana market traffic
+  cpu: 1
+  memoryMiB: 512
+  maxInstances: 10
+  minInstances: 0
+
+# Next.js App Router specific configuration
+env:
+  - variable: NEXT_PUBLIC_FIREBASE_API_KEY
+    value: "AIzaSyAKSnpljCHl0weO0Y7PfbvZPArhjSfVXlk"
+  - variable: NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
+    value: "gigconnect-ac1f9.firebaseapp.com"
+  - variable: NEXT_PUBLIC_FIREBASE_PROJECT_ID
+    value: "gigconnect-ac1f9"

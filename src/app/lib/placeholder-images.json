@@ -2,15 +2,21 @@
   "placeholderImages": [
     {
       "id": "hero-bg",
-      "description": "Botswana musical performance atmosphere",
-      "imageUrl": "https://picsum.photos/seed/gigconnect-hero-live/1200/800",
-      "imageHint": "concert stage"
+      "description": "Professional Botswana concert stage with vibrant lighting",
+      "imageUrl": "https://picsum.photos/seed/gigconnect-live-pro/1200/800",
+      "imageHint": "concert crowd"
     },
     {
       "id": "login-bg",
-      "description": "Abstract musical rhythms",
-      "imageUrl": "https://picsum.photos/seed/gigconnect-login-live/800/600",
-      "imageHint": "sound waves"
+      "description": "Abstract rhythmic sound waves and professional music gear",
+      "imageUrl": "https://picsum.photos/seed/gigconnect-studio-pro/800/600",
+      "imageHint": "music producer"
+    },
+    {
+      "id": "event-card-placeholder",
+      "description": "Standard musical event placeholder",
+      "imageUrl": "https://picsum.photos/seed/gig-event/600/400",
+      "imageHint": "dj deck"
     }
   ]
 }
