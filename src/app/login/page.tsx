@@ -1,3 +1,5 @@
+"use client"
+
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -12,13 +14,6 @@ import { Briefcase, ArrowLeft, Loader2, KeyRound, Mail, RefreshCw, AlertTriangle
 import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import type { Metadata } from 'next';
-
-export const metadata: Metadata = {
-  title: 'Login',
-  description: 'Access your GigConnect professional account.',
-  robots: 'noindex, nofollow',
-};
 
 const ADMIN_UID = 'rJq93j6Mi5NuAPEPNDYpLtSgFfc2';
 

@@ -1,3 +1,5 @@
+"use client"
+
 import { useMemo, useState } from 'react';
 import { useUser, useFirestore, useCollection } from '@/firebase';
 import { collection, query, where, doc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
@@ -20,15 +22,6 @@ import { Navbar } from '@/components/navbar';
 import { WhatsAppButton } from '@/components/whatsapp-button';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
-import type { Metadata } from 'next';
-
-export const metadata: Metadata = {
-  title: 'Ticket Hub | Buy Event Tickets in Botswana',
-  description: 'Discover upcoming concerts, festivals, and club nights in Botswana. Buy tickets directly from verified organizers via WhatsApp.',
-  alternates: {
-    canonical: '/tickets',
-  },
-};
 
 export default function BuyTicketsPage() {
   const { user } = useUser();

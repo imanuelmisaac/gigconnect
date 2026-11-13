@@ -1,3 +1,5 @@
+"use client"
+
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -13,13 +15,6 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Briefcase, ArrowLeft, Loader2, Mail, AlertTriangle, Eye, EyeOff } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import type { Metadata } from 'next';
-
-export const metadata: Metadata = {
-  title: 'Register',
-  description: 'Join the GigConnect network as an artist, DJ, or gig maker.',
-  robots: 'noindex, nofollow',
-};
 
 export default function RegisterPage() {
   const [email, setEmail] = useState('');

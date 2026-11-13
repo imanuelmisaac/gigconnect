@@ -1,3 +1,5 @@
+"use client"
+
 import { useMemo, useState } from 'react';
 import { useUser, useFirestore, useCollection } from '@/firebase';
 import { collection, query, where, doc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
@@ -21,15 +23,6 @@ import { Navbar } from '@/components/navbar';
 import { useToast } from '@/hooks/use-toast';
 import { WhatsAppButton } from '@/components/whatsapp-button';
 import Link from 'next/link';
-import type { Metadata } from 'next';
-
-export const metadata: Metadata = {
-  title: 'Gig Marketplace | Find Music Gigs in Botswana',
-  description: 'Explore live musical performances, DJ sets, and artist opportunities across Gaborone, Francistown, and more. Apply for verified gigs today.',
-  alternates: {
-    canonical: '/events',
-  },
-};
 
 export default function PublicEventsPage() {
   const { user } = useUser();
