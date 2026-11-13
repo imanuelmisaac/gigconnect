@@ -13,7 +13,8 @@ import {
   ArrowRight,
   TrendingUp,
   Users,
-  Heart
+  Heart,
+  Ticket
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
@@ -21,6 +22,7 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Navbar } from '@/components/navbar';
 import { useToast } from '@/hooks/use-toast';
+import { WhatsAppButton } from '@/components/whatsapp-button';
 import Link from 'next/link';
 
 export default function PublicEventsPage() {
@@ -31,7 +33,6 @@ export default function PublicEventsPage() {
 
   const eventsQuery = useMemo(() => {
     if (!db) return null;
-    // Simplified query for better reliability on public display
     return query(
       collection(db, 'events'),
       where('status', '==', 'Open')
@@ -42,7 +43,6 @@ export default function PublicEventsPage() {
 
   const filteredEvents = useMemo(() => {
     if (!rawEvents) return [];
-    // Client side filter for paymentStatus to avoid complex index requirement for guests
     return rawEvents
       .filter((e: any) => e.paymentStatus === 'Complete')
       .filter((e: any) => 
@@ -90,7 +90,7 @@ export default function PublicEventsPage() {
               <div className="inline-flex items-center gap-2 px-2 py-0.5 rounded bg-primary/10 text-primary text-[10px] font-bold uppercase tracking-wider">
                 <TrendingUp className="h-3 w-3" /> Live Gigs
               </div>
-              <h1 className="text-4xl lg:text-5xl font-extrabold text-primary font-headline uppercase tracking-tighter text-balance">Gig Marketplace</h1>
+              <h1 className="text-4xl lg:text-5xl font-extrabold text-primary font-headline uppercase tracking-tighter text-balance text-slate-900">Gig Marketplace</h1>
               <p className="text-muted-foreground text-lg max-w-xl">Browse verified musical performances and talent opportunities across Botswana.</p>
             </div>
             <div className="relative w-full md:max-w-md">
@@ -151,20 +151,31 @@ export default function PublicEventsPage() {
                       &quot;{event.description || 'Join us for a professional performance set.'}&quot;
                     </p>
                   </CardContent>
-                  <CardFooter className="bg-muted/30 pt-6 flex gap-2">
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      className={`px-3 ${isInterested ? 'text-red-500 hover:text-red-600' : 'text-muted-foreground hover:text-primary'}`}
-                      onClick={() => handleToggleInterest(event)}
-                    >
-                      <Heart className={`h-4 w-4 ${isInterested ? 'fill-red-500' : ''}`} />
-                    </Button>
-                    <Link href={user ? "/artist/events" : "/register"} className="flex-1">
-                      <Button className="w-full font-bold uppercase tracking-widest gap-2 bg-primary h-9">
-                        {user ? "Apply Now" : "Register to Apply"} <ArrowRight className="h-4 w-4" />
+                  <CardFooter className="bg-muted/30 pt-6 flex flex-col gap-3">
+                    <div className="flex w-full gap-2">
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className={`px-3 ${isInterested ? 'text-red-500 hover:text-red-600' : 'text-muted-foreground hover:text-primary'}`}
+                        onClick={() => handleToggleInterest(event)}
+                      >
+                        <Heart className={`h-4 w-4 ${isInterested ? 'fill-red-500' : ''}`} />
                       </Button>
-                    </Link>
+                      <Link href={user ? "/artist/events" : "/register"} className="flex-1">
+                        <Button className="w-full font-bold uppercase tracking-widest gap-2 bg-primary h-9 text-[10px]">
+                          {user ? "Apply as Talent" : "Register to Apply"} <ArrowRight className="h-3 w-3" />
+                        </Button>
+                      </Link>
+                    </div>
+                    {event.ticketWhatsApp && (
+                      <WhatsAppButton 
+                        phoneNumber={event.ticketWhatsApp} 
+                        message={`Hi, I'm interested in tickets for "${event.title}" on ${event.date}. Saw this on GigConnect.`}
+                        className="w-full bg-accent hover:bg-accent/90 text-white font-bold h-9 text-[10px] uppercase tracking-widest gap-2"
+                      >
+                        <Ticket className="h-4 w-4" /> Buy Ticket (WhatsApp)
+                      </WhatsAppButton>
+                    )}
                   </CardFooter>
                 </Card>
               );

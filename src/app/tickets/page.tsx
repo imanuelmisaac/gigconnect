@@ -32,7 +32,6 @@ export default function BuyTicketsPage() {
 
   const eventsQuery = useMemo(() => {
     if (!db) return null;
-    // Simplified query for public ticketing
     return query(
       collection(db, 'events'),
       where('status', '==', 'Open')
@@ -96,7 +95,7 @@ export default function BuyTicketsPage() {
               <div className="inline-flex items-center gap-2 px-2 py-0.5 rounded bg-accent/10 text-accent text-[10px] font-bold uppercase tracking-wider">
                 <TrendingUp className="h-3 w-3" /> Upcoming Events
               </div>
-              <h1 className="text-4xl lg:text-5xl font-extrabold text-primary font-headline uppercase tracking-tighter text-balance">Ticket Hub</h1>
+              <h1 className="text-4xl lg:text-5xl font-extrabold text-primary font-headline uppercase tracking-tighter text-balance text-slate-900">Ticket Hub</h1>
               <p className="text-muted-foreground text-lg max-w-xl">Find your next night out. Buy tickets directly from organizers via WhatsApp.</p>
             </div>
             <div className="relative w-full md:max-w-md">
@@ -156,7 +155,7 @@ export default function BuyTicketsPage() {
                   <CardFooter className="bg-muted/30 pt-6 gap-2">
                     <Button 
                       variant="outline" 
-                      className={`flex-1 font-bold gap-2 ${isInterested ? 'bg-red-50 text-red-500 border-red-200 hover:bg-red-100' : 'text-muted-foreground'}`}
+                      className={`flex-1 font-bold gap-2 text-[11px] uppercase tracking-wider ${isInterested ? 'bg-red-50 text-red-500 border-red-200 hover:bg-red-100' : 'text-muted-foreground'}`}
                       onClick={() => handleToggleInterest(event)}
                     >
                       <Heart className={`h-4 w-4 ${isInterested ? 'fill-red-500' : ''}`} />
@@ -165,7 +164,7 @@ export default function BuyTicketsPage() {
                     <WhatsAppButton 
                       phoneNumber={event.ticketWhatsApp || ''} 
                       message={`Hi, I'm interested in buying tickets for "${event.title}" on ${event.date}. Saw this on GigConnect.`}
-                      className="flex-1 bg-accent hover:bg-accent/90 text-white font-bold gap-2"
+                      className="flex-1 bg-accent hover:bg-accent/90 text-white font-bold gap-2 text-[11px] uppercase tracking-wider"
                       disabled={!event.ticketWhatsApp}
                     >
                       <Ticket className="h-4 w-4" /> Buy Ticket
