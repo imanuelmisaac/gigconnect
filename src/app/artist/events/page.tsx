@@ -19,7 +19,8 @@ import {
   AlertCircle,
   Crown,
   Lock,
-  Check
+  Check,
+  Users
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
@@ -256,6 +257,9 @@ export default function ArtistEventsPage() {
                   <div className="grid gap-2 text-xs text-muted-foreground">
                     <div className="flex items-center gap-2"><Calendar className="h-3 w-3" /> {event.date}</div>
                     <div className="flex items-center gap-2"><MapPin className="h-3 w-3" /> {event.location}</div>
+                    <div className="flex items-center gap-2 text-accent font-bold">
+                      <Users className="h-3 w-3" /> {event.interestedUsers?.length || 0} Interested
+                    </div>
                   </div>
                   <div className="flex flex-wrap gap-1">
                     {event.genres?.map((g: string) => <Badge key={g} variant="outline" className="text-[9px] py-0">{g}</Badge>)}
