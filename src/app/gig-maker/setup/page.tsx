@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
@@ -104,7 +105,7 @@ export default function GigMakerSetupPage() {
       toast({
         variant: "destructive",
         title: "Missing Information",
-        description: "Please select your business role (Bar or Event Organizer).",
+        description: "Please select your business role.",
       });
       return;
     }
@@ -208,6 +209,8 @@ export default function GigMakerSetupPage() {
                   <SelectContent>
                     <SelectItem value="Bar">Bar / Club</SelectItem>
                     <SelectItem value="Event Organizer">Event Organizer</SelectItem>
+                    <SelectItem value="Church">Church</SelectItem>
+                    <SelectItem value="Other">Other</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

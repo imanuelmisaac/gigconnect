@@ -132,7 +132,9 @@
           "type": "string",
           "enum": [
             "Bar",
-            "Event Organizer"
+            "Event Organizer",
+            "Church",
+            "Other"
           ]
         },
         "location": {
