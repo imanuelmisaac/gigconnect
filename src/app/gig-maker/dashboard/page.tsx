@@ -44,7 +44,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/avatar';
 import { WhatsAppButton } from '@/components/whatsapp-button';
 
 export default function GigMakerDashboardPage() {
@@ -156,7 +156,7 @@ export default function GigMakerDashboardPage() {
       }
 
       if (deletedCount > 0) {
-        toast({ title: "Dashboard Cleaned", description: `Removed ${deletedCount} concluded/expired events.` });
+        toast({ title: "Auto-Cleanup Successful", description: `Removed ${deletedCount} concluded or expired gig listings.` });
       }
       cleanupPerformed.current = true;
     };
@@ -178,7 +178,7 @@ export default function GigMakerDashboardPage() {
       }
       const eventRef = doc(db, 'events', eventId);
       await deleteDoc(eventRef);
-      toast({ title: "Event Deleted", description: `"${eventToDelete.title}" has been removed.` });
+      toast({ title: "Event Deleted", description: `"${eventToDelete.title}" has been removed from the platform.` });
       setEventToDelete(null);
     } catch (e: any) {
       errorEmitter.emit('permission-error', new FirestorePermissionError({
@@ -219,7 +219,10 @@ export default function GigMakerDashboardPage() {
           </Button>
         </nav>
         <div className="p-4 border-t border-white/10">
-           <Button variant="ghost" className="w-full justify-start text-white hover:bg-white/10" onClick={() => auth.signOut()}>
+           <Button variant="ghost" className="w-full justify-start text-white hover:bg-white/10" onClick={() => {
+             auth.signOut();
+             toast({ title: "Logged Out", description: "Business session ended." });
+           }}>
             <LogOut className="mr-2 h-4 w-4" /> Logout
           </Button>
         </div>

@@ -1,4 +1,3 @@
-
 "use client"
 
 import { useState, useEffect, useMemo } from 'react';
@@ -72,23 +71,16 @@ export default function ArtistSetupPage() {
   const artistDocRef = useMemo(() => user ? doc(db, 'artists', user.uid) : null, [db, user]);
   const { data: artistProfile, loading: profileLoading } = useDoc(artistDocRef);
 
-  // Detect flag based on phone number
   const detectedFlag = useMemo(() => {
     const phone = formData.whatsappNumber;
     if (!phone.startsWith('+')) return null;
-    
-    // Check for 4-char prefixes first (+267, +234, etc)
     const prefix4 = phone.substring(0, 4);
     if (COUNTRY_FLAGS[prefix4]) return COUNTRY_FLAGS[prefix4];
-    
-    // Then 3-char prefixes (+27)
     const prefix3 = phone.substring(0, 3);
     if (COUNTRY_FLAGS[prefix3]) return COUNTRY_FLAGS[prefix3];
-    
     return null;
   }, [formData.whatsappNumber]);
 
-  // Prepopulate form data if it exists
   useEffect(() => {
     if (artistProfile && !isDataLoaded) {
       setFormData({
@@ -125,21 +117,14 @@ export default function ArtistSetupPage() {
       formData.bookingPrice,
       formData.whatsappNumber,
     ];
-    
-    const requiredFiles = [
-      files.profilePic
-    ];
-
+    const requiredFiles = [files.profilePic];
     const filledFieldsCount = requiredFields.filter(field => field && field.toString().trim().length > 0).length;
     const filledFilesCount = requiredFiles.filter(file => file !== null).length;
     const genresFilled = formData.genres.length > 0 ? 1 : 0;
-
     const totalRequired = requiredFields.length + requiredFiles.length + 1;
     const totalFilled = filledFieldsCount + filledFilesCount + genresFilled;
-    
     const percentage = Math.round((totalFilled / totalRequired) * 100);
     const isComplete = percentage === 100;
-
     return { percentage, isComplete };
   }, [formData, files]);
 
@@ -155,7 +140,6 @@ export default function ArtistSetupPage() {
   };
 
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    // Only allow + and numbers
     const value = e.target.value.replace(/[^0-9+]/g, '');
     setFormData(prev => ({ ...prev, whatsappNumber: value }));
   };
@@ -181,30 +165,21 @@ export default function ArtistSetupPage() {
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>, key: keyof typeof files) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
-      
       if (file.size > 700 * 1024) {
         toast({
           variant: "destructive",
           title: "File too large",
-          description: "Please upload an image smaller than 700KB. Try resizing your photo.",
+          description: "Please upload an image smaller than 700KB.",
         });
         e.target.value = '';
         return;
       }
-      
       try {
         const base64 = await fileToBase64(file);
         setFiles(prev => ({ ...prev, [key]: base64 }));
-        toast({
-          title: "Photo Added",
-          description: "Your profile picture is ready.",
-        });
+        toast({ title: "Photo Uploaded", description: "Your profile picture has been updated locally." });
       } catch (err) {
-        toast({
-          variant: "destructive",
-          title: "Error reading file",
-          description: "Could not process the selected image.",
-        });
+        toast({ variant: "destructive", title: "Upload Error", description: "Could not process the image." });
       } finally {
         e.target.value = '';
       }
@@ -241,8 +216,8 @@ export default function ArtistSetupPage() {
       toast({
         title: completionStats.isComplete ? "Profile Complete!" : "Progress Saved",
         description: completionStats.isComplete 
-          ? "You can now access your talent dashboard." 
-          : "Your progress has been saved. Please complete the remaining fields.",
+          ? "Your professional profile is now live." 
+          : "We've saved your progress. Complete the remaining steps to get gigs.",
       });
 
       if (completionStats.isComplete) {

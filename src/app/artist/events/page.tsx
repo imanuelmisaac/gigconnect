@@ -54,7 +54,6 @@ export default function ArtistEventsPage() {
   const [proposedPrice, setProposedPrice] = useState('');
   const [message, setMessage] = useState('');
 
-  // Protect route
   useEffect(() => {
     if (!userLoading && !user) {
       router.push('/login');
@@ -68,7 +67,6 @@ export default function ArtistEventsPage() {
 
   const { data: artistProfile } = useDoc(artistProfileRef);
 
-  // Month tracking
   const startOfMonth = useMemo(() => {
     const d = new Date();
     d.setDate(1);
@@ -141,7 +139,7 @@ export default function ArtistEventsPage() {
       toast({
         variant: "destructive",
         title: "Monthly Limit Reached",
-        description: `Your ${limits.label} allows only ${limits.apps} applications per month. Upgrade to apply for more.`,
+        description: `Your ${limits.label} allows only ${limits.apps} applications per month.`,
       });
       router.push('/artist/subscription');
       return;
@@ -155,7 +153,7 @@ export default function ArtistEventsPage() {
     
     const eventId = selectedEvent.id || selectedEvent.eventId;
     if (!eventId) {
-      toast({ variant: "destructive", title: "Error", description: "Invalid event data." });
+      toast({ variant: "destructive", title: "Error", description: "Invalid event data detected." });
       return;
     }
 
@@ -180,9 +178,10 @@ export default function ArtistEventsPage() {
 
     setDoc(appRef, applicationData)
       .then(() => {
-        toast({ title: "Application Sent!", description: `Success! You've applied for ${selectedEvent.title}.` });
+        toast({ title: "Application Sent!", description: `You've successfully applied for ${selectedEvent.title}.` });
         setIsApplyDialogOpen(false);
         setSelectedEvent(null);
+        setMessage('');
       })
       .catch(async (err) => {
         errorEmitter.emit('permission-error', new FirestorePermissionError({
@@ -236,7 +235,7 @@ export default function ArtistEventsPage() {
             <AlertTriangle className="h-4 w-4" />
             <AlertTitle className="font-bold">Monthly Limit Reached</AlertTitle>
             <AlertDescription>
-              You have used all {limits.apps} applications for this month. Upgrade to one of our Pro plans to apply for more gigs.
+              You have used all {limits.apps} applications for this month. Upgrade to apply for more gigs.
             </AlertDescription>
           </Alert>
         )}

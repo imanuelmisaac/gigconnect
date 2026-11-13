@@ -1,4 +1,3 @@
-
 "use client"
 
 import { useState, useMemo } from 'react';
@@ -91,7 +90,7 @@ export default function SubscriptionPage() {
 
   const handleSelectPackage = (pkg: any) => {
     if (pkg.id === currentTier) {
-      toast({ title: "Current Plan", description: "You are already on this plan." });
+      toast({ title: "Already on this plan", description: "You are already using the features of this subscription." });
       return;
     }
     if (pkg.price === 0) {
@@ -113,11 +112,11 @@ export default function SubscriptionPage() {
         updatedAt: serverTimestamp()
       });
 
-      toast({ title: "Subscription Updated!", description: `Welcome to the ${tierId.toUpperCase()} package.` });
+      toast({ title: "Plan Upgraded!", description: `You are now on the ${tierId.toUpperCase()} package.` });
       setShowPaymentModal(false);
       router.push('/artist/dashboard');
     } catch (e: any) {
-      toast({ variant: "destructive", title: "Update Error", description: e.message });
+      toast({ variant: "destructive", title: "Update Failed", description: e.message });
     } finally {
       setUpgrading(false);
     }
@@ -202,7 +201,10 @@ export default function SubscriptionPage() {
               <div className="flex justify-between border-b pb-2"><span>Orange Money</span><span className="font-black text-primary">76479543</span></div>
             </div>
             <div className="bg-primary/5 p-4 rounded-xl border border-primary/20 space-y-3">
-              <WhatsAppButton phoneNumber="+26774266208" message={`Hi, I've just paid P${selectedPackage?.price} for the ${selectedPackage?.name}. Email: ${user?.email}`} className="w-full bg-green-600 hover:bg-green-700 text-white font-bold h-10" onClick={() => setHasSentScreenshot(true)}>Send Proof of Payment</WhatsAppButton>
+              <WhatsAppButton phoneNumber="+26774266208" message={`Hi, I've just paid P${selectedPackage?.price} for the ${selectedPackage?.name}. Email: ${user?.email}`} className="w-full bg-green-600 hover:bg-green-700 text-white font-bold h-10" onClick={() => {
+                setHasSentScreenshot(true);
+                toast({ title: "WhatsApp Opened", description: "Please send your proof of payment screenshot." });
+              }}>Send Proof of Payment</WhatsAppButton>
               {hasSentScreenshot && <p className="text-[10px] text-green-600 font-bold text-center">Proof sent. You can now activate your plan.</p>}
             </div>
           </div>

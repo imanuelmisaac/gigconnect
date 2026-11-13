@@ -1,4 +1,3 @@
-
 "use client"
 
 import { useState, useMemo } from 'react';
@@ -104,7 +103,10 @@ export default function FindFeaturesPage() {
 
   const handleApplyFeature = async () => {
     if (!user || !db || !targetArtist || !artistProfile) return;
-    if (isLimitReached) return;
+    if (isLimitReached) {
+      toast({ variant: "destructive", title: "Limit Reached", description: "You have reached your monthly feature request limit." });
+      return;
+    }
     
     setSubmitting(true);
     const featureRef = doc(db, 'artists', targetArtist.userId, 'features', user.uid);
@@ -124,7 +126,7 @@ export default function FindFeaturesPage() {
 
     setDoc(featureRef, featureData)
       .then(() => {
-        toast({ title: "Request Sent!", description: `Success! Request sent to ${targetArtist.artistName}.` });
+        toast({ title: "Request Sent!", description: `Success! Collaboration request sent to ${targetArtist.artistName}.` });
         setIsDialogOpen(false);
         setMessage('');
       })

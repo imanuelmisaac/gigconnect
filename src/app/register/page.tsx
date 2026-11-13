@@ -12,7 +12,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Briefcase, ArrowLeft, Loader2, Mail, AlertTriangle, Eye, EyeOff, ShieldCheck } from 'lucide-react';
+import { Briefcase, ArrowLeft, Loader2, Mail, AlertTriangle, Eye, EyeOff } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
@@ -44,7 +44,6 @@ export default function RegisterPage() {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
-      // Send verification email
       await sendEmailVerification(user);
 
       const userRef = doc(db, 'users', user.uid);
@@ -59,19 +58,27 @@ export default function RegisterPage() {
 
       setVerificationSent(true);
       toast({
-        title: "Account Created!",
-        description: "A verification email has been sent to your inbox.",
+        title: "Account Created Successfully",
+        description: "Please check your email for a verification link.",
       });
     } catch (error: any) {
       console.error("Registration Error:", error);
+      let errorMsg = "Failed to create account. Please try again.";
+      
+      if (error.code === 'auth/email-already-in-use') {
+        errorMsg = "This email is already registered.";
+      } else if (error.code === 'auth/weak-password') {
+        errorMsg = "Password is too weak. Use at least 6 characters.";
+      }
+
+      toast({
+        variant: "destructive",
+        title: "Registration Error",
+        description: errorMsg,
+      });
+
       if (error.message?.includes('400')) {
-        setSetupError("Firebase Setup Error: Ensure 'Email/Password' is ENABLED in your Firebase Console (Authentication > Sign-in method).");
-      } else {
-        toast({
-          variant: "destructive",
-          title: "Registration Error",
-          description: error.message || "Failed to create account. Please try again.",
-        });
+        setSetupError("Firebase Setup Error: Ensure 'Email/Password' is ENABLED in your Firebase Console.");
       }
     } finally {
       setLoading(false);

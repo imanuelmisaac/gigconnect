@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
@@ -49,7 +48,6 @@ export default function CreateEventPage() {
     genres: [] as string[],
   });
 
-  // System Config
   const { data: systemConfig } = useDoc(doc(db, 'system', 'config'));
   const currentFee = useMemo(() => {
     const base = systemConfig?.eventFee || 25;
@@ -57,7 +55,6 @@ export default function CreateEventPage() {
     return Math.floor(base * (1 - discount / 100));
   }, [systemConfig]);
 
-  // Fetch Package 4 artists
   const proArtistsQuery = useMemo(() => {
     if (!db) return null;
     return query(collection(db, 'artists'), where('subscriptionTier', '==', 'package4'));
@@ -83,10 +80,6 @@ export default function CreateEventPage() {
     setFormData((prev) => ({ ...prev, [id]: value }));
   };
 
-  const handleSelectChange = (value: string) => {
-    setFormData((prev) => ({ ...prev, experienceLevel: value }));
-  };
-
   const handleGenreChange = (genre: string) => {
     setFormData((prev) => ({
       ...prev,
@@ -99,7 +92,7 @@ export default function CreateEventPage() {
   const handlePreSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (formData.genres.length === 0) {
-      toast({ variant: "destructive", title: "Missing Genres", description: "Select at least one genre." });
+      toast({ variant: "destructive", title: "Missing Genres", description: "Please select at least one genre for your event." });
       return;
     }
     setShowPaymentModal(true);
@@ -132,11 +125,11 @@ export default function CreateEventPage() {
         updatedAt: serverTimestamp(),
       };
       await setDoc(eventRef, eventData);
-      toast({ title: "Event Created!", description: "Your event is live. Ensure you've sent payment proof." });
+      toast({ title: "Event Published!", description: "Your gig is now visible to all verified talent." });
       setShowPaymentModal(false);
       setShowSuggestions(true);
     } catch (error: any) {
-      toast({ variant: "destructive", title: "Error", description: error.message });
+      toast({ variant: "destructive", title: "Publication Failed", description: error.message });
       setLoading(false);
     }
   };
@@ -243,10 +236,13 @@ export default function CreateEventPage() {
           <div className="space-y-6 py-4">
             <div className="bg-secondary/30 p-4 rounded-xl space-y-3 text-sm">
               <div className="flex items-center justify-between border-b pb-2"><span>MyZaka</span><span className="font-bold text-primary">74266208</span></div>
-              <div className="flex items-center justify-between border-b pb-2"><span>Orange Money</span><span className="font-bold text-primary">76479543</span></div>
+              <div className="flex items-center justify-between border-b pb-2"><span>Orange Money</span><span className="font-black text-primary">76479543</span></div>
             </div>
             <div className="bg-primary/5 p-4 rounded-xl border border-primary/20 space-y-3">
-              <WhatsAppButton phoneNumber="+26774266208" message={`Hi, I've just paid P${currentFee} for my event "${formData.title}".`} className="w-full bg-green-600 hover:bg-green-700 text-white font-bold h-9" size="sm" onClick={() => setHasSentScreenshot(true)}>Send Screenshot</WhatsAppButton>
+              <WhatsAppButton phoneNumber="+26774266208" message={`Hi, I've just paid P{currentFee} for my event "${formData.title}".`} className="w-full bg-green-600 hover:bg-green-700 text-white font-bold h-9" size="sm" onClick={() => {
+                setHasSentScreenshot(true);
+                toast({ title: "WhatsApp Redirect", description: "Send your payment confirmation to the admin." });
+              }}>Send Screenshot</WhatsAppButton>
               {hasSentScreenshot && <p className="text-[10px] text-green-600 font-bold text-center">Screenshot sent. You can now publish.</p>}
             </div>
           </div>

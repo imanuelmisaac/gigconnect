@@ -79,7 +79,6 @@ export default function AdminDashboardPage() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [savingConfig, setSavingConfig] = useState(false);
 
-  // Auth Protection
   const userDocRef = useMemo(() => user ? doc(db, 'users', user.uid) : null, [db, user]);
   const { data: currentUserProfile, loading: profileLoading } = useDoc(userDocRef);
 
@@ -92,12 +91,12 @@ export default function AdminDashboardPage() {
       const isSystemAdmin = user.uid === ADMIN_UID;
       const hasAdminRole = currentUserProfile?.role === 'admin';
       if (!isSystemAdmin && !hasAdminRole) {
+        toast({ variant: "destructive", title: "Access Denied", description: "You do not have administrator privileges." });
         router.push('/login');
       }
     }
-  }, [user, userLoading, currentUserProfile, profileLoading, router]);
+  }, [user, userLoading, currentUserProfile, profileLoading, router, toast]);
 
-  // Data Queries
   const usersQuery = useMemo(() => query(collection(db, 'users'), orderBy('createdAt', 'desc')), [db]);
   const artistsQuery = useMemo(() => query(collection(db, 'artists')), [db]);
   const eventsQuery = useMemo(() => query(collection(db, 'events'), orderBy('createdAt', 'desc')), [db]);
@@ -108,7 +107,6 @@ export default function AdminDashboardPage() {
   const { data: events, loading: eventsLoading } = useCollection(eventsQuery);
   const { data: gigMakers, loading: gigMakersLoading } = useCollection(gigMakersQuery);
 
-  // System Config
   const configRef = useMemo(() => doc(db, 'system', 'config'), [db]);
   const { data: systemConfig } = useDoc(configRef);
   const [localConfig, setLocalConfig] = useState<any>({
@@ -128,7 +126,6 @@ export default function AdminDashboardPage() {
     }
   }, [systemConfig]);
 
-  // Filtering
   const filteredUsers = useMemo(() => {
     if (!users) return [];
     return users.filter((u: any) => 
@@ -152,7 +149,6 @@ export default function AdminDashboardPage() {
     return users.filter((u: any) => u.role === broadcastRole);
   }, [users, broadcastRole]);
 
-  // Actions
   const handleUpdateConfig = async () => {
     setSavingConfig(true);
     try {
@@ -162,7 +158,7 @@ export default function AdminDashboardPage() {
       }, { merge: true });
       toast({ title: "Configuration Saved", description: "Global settings and specials have been updated." });
     } catch (e: any) {
-      toast({ variant: "destructive", title: "Error", description: e.message });
+      toast({ variant: "destructive", title: "Update Error", description: e.message });
     } finally {
       setSavingConfig(false);
     }
@@ -175,9 +171,9 @@ export default function AdminDashboardPage() {
         subscriptionTier: tier,
         updatedAt: serverTimestamp()
       });
-      toast({ title: "Tier Updated", description: "User's subscription has been changed." });
+      toast({ title: "Subscription Tier Updated", description: `User is now on the ${tier.toUpperCase()} plan.` });
     } catch (e: any) {
-      toast({ variant: "destructive", title: "Error", description: "Failed to update tier. Ensure user is an artist." });
+      toast({ variant: "destructive", title: "Tier Update Failed", description: "Ensure the user is a registered artist." });
     }
   };
 
@@ -188,7 +184,7 @@ export default function AdminDashboardPage() {
         paymentStatus: status,
         updatedAt: serverTimestamp()
       });
-      toast({ title: "Event Status Updated", description: `Payment status is now ${status}.` });
+      toast({ title: "Event Status Updated", description: `Visibility is now set to ${status}.` });
     } catch (e: any) {
       toast({ variant: "destructive", title: "Error", description: e.message });
     }
@@ -196,6 +192,10 @@ export default function AdminDashboardPage() {
 
   const handleCopyEmails = () => {
     const emails = broadcastUsers.map((u: any) => u.email).filter(Boolean).join(', ');
+    if (!emails) {
+      toast({ variant: "destructive", title: "No Emails", description: "No users found in the selected category." });
+      return;
+    }
     navigator.clipboard.writeText(emails);
     toast({ title: "Emails Copied", description: "Pasted them into your BCC field." });
   };
@@ -206,8 +206,13 @@ export default function AdminDashboardPage() {
     const gmPhones = gigMakers?.filter((g: any) => targetIds.has(g.userId)).map((g: any) => g.whatsappNumber);
     const allPhones = [...(artistPhones || []), ...(gmPhones || [])].filter(Boolean).join(', ');
     
+    if (!allPhones) {
+      toast({ variant: "destructive", title: "No Phone Numbers", description: "No valid contact numbers found." });
+      return;
+    }
+
     navigator.clipboard.writeText(allPhones);
-    toast({ title: "Numbers Copied", description: "Use them to create a WhatsApp Broadcast list." });
+    toast({ title: "WhatsApp Numbers Copied", description: "Ready for your broadcast list." });
   };
 
   const handleDeleteUser = async () => {
@@ -218,10 +223,10 @@ export default function AdminDashboardPage() {
       await deleteDoc(doc(db, 'users', uid));
       await deleteDoc(doc(db, 'artists', uid));
       await deleteDoc(doc(db, 'gig-makers', uid));
-      toast({ title: "User Purged", description: "Profile data removed." });
+      toast({ title: "User Profile Purged", description: "All professional data has been removed from the platform." });
       setUserToDelete(null);
     } catch (e: any) {
-      toast({ variant: "destructive", title: "Error", description: e.message });
+      toast({ variant: "destructive", title: "Purge Error", description: e.message });
     } finally {
       setIsDeleting(false);
     }
@@ -273,7 +278,10 @@ export default function AdminDashboardPage() {
           </Button>
         </nav>
         <div className="p-4 border-t border-white/10">
-           <Button variant="ghost" className="w-full justify-start text-white hover:bg-white/10" onClick={() => auth.signOut()}>
+           <Button variant="ghost" className="w-full justify-start text-white hover:bg-white/10" onClick={() => {
+             auth.signOut();
+             toast({ title: "Logged Out", description: "Admin session ended." });
+           }}>
             <LogOut className="mr-2 h-4 w-4" /> Logout
           </Button>
         </div>

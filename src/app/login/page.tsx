@@ -15,7 +15,6 @@ import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
-// Updated admin UID provided by user
 const ADMIN_UID = 'rJq93j6Mi5NuAPEPNDYpLtSgFfc2';
 
 export default function LoginPage() {
@@ -47,7 +46,6 @@ export default function LoginPage() {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
-      // IMMEDIATE ADMIN CHECK: If UID matches system owner, skip verification/role checks and go to admin
       if (user.uid === ADMIN_UID) {
         toast({ title: "Admin Login", description: "System administrator access granted." });
         router.push('/admin/dashboard');
@@ -61,12 +59,11 @@ export default function LoginPage() {
         const userData = userDocSnap.data();
         const role = userData.role;
 
-        // Admins bypass email verification check
         if (role !== 'admin' && !user.emailVerified) {
           toast({
             variant: "destructive",
-            title: "Account Not Verified",
-            description: "Please verify your email address to access your dashboard.",
+            title: "Verification Required",
+            description: "Please check your inbox to verify your email address.",
           });
           setIsUnverified(true);
           setLoading(false);
@@ -74,8 +71,8 @@ export default function LoginPage() {
         }
 
         toast({
-          title: "Welcome back!",
-          description: "Login successful.",
+          title: "Successfully logged in",
+          description: `Welcome back, ${userData.firstName || 'User'}!`,
         });
 
         if (role === 'admin') {
@@ -96,18 +93,22 @@ export default function LoginPage() {
         await signOut(auth);
       }
     } catch (error: any) {
-      console.error("Login Error:", error);
+      let errorMsg = "Failed to login. Please check your credentials.";
       
-      if (error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found') {
-        setSetupError("Account not found or incorrect password. Did you register a new account for GigConnect?");
-      } else if (error.message?.includes('400')) {
-        setSetupError("Firebase Setup Error: Ensure 'Email/Password' is ENABLED in the Firebase Console (Authentication > Sign-in method).");
-      } else {
-        toast({
-          variant: "destructive",
-          title: "Login Error",
-          description: error.message || "Failed to login. Please check your credentials.",
-        });
+      if (error.code === 'auth/invalid-credential' || error.code === 'auth/wrong-password' || error.code === 'auth/user-not-found') {
+        errorMsg = "Incorrect email or password. Please try again.";
+      } else if (error.code === 'auth/too-many-requests') {
+        errorMsg = "Too many failed attempts. Please try again later.";
+      }
+
+      toast({
+        variant: "destructive",
+        title: "Login Error",
+        description: errorMsg,
+      });
+      
+      if (error.message?.includes('400')) {
+        setSetupError("Firebase Setup Error: Ensure 'Email/Password' is ENABLED in the Firebase Console.");
       }
     } finally {
       setLoading(false);
