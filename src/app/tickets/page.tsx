@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { useUser, useFirestore, useCollection } from '@/firebase';
-import { collection, query, where, doc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
+import { collection, query, where, doc, updateDoc, arrayUnion } from 'firebase/firestore';
 import { 
   Loader2, 
   Calendar, 
@@ -12,7 +12,10 @@ import {
   Users, 
   Heart,
   TrendingUp,
-  Music
+  Music,
+  CheckCircle2,
+  Mail,
+  MessageCircle
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -21,13 +24,21 @@ import { Input } from '@/components/ui/input';
 import { Navbar } from '@/components/navbar';
 import { WhatsAppButton } from '@/components/whatsapp-button';
 import { useToast } from '@/hooks/use-toast';
-import Link from 'next/link';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
 
 export default function BuyTicketsPage() {
   const { user } = useUser();
   const db = useFirestore();
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState('');
+
+  // Interest Dialog States
+  const [showInterestDialog, setShowInterestDialog] = useState(false);
+  const [interestEmail, setInterestEmail] = useState('');
+  const [selectedEvent, setSelectedEvent] = useState<any>(null);
+  const [submittingInterest, setSubmittingInterest] = useState(false);
+  const [interestSuccess, setInterestSubmitted] = useState(false);
 
   const eventsQuery = useMemo(() => {
     if (!db) return null;
@@ -54,50 +65,36 @@ export default function BuyTicketsPage() {
       });
   }, [rawEvents, searchTerm]);
 
-  const handleToggleInterest = async (event: any) => {
-    if (!user) {
-      toast({
-        title: "Interested?",
-        description: "Log in or register to follow events and save your interests.",
-      });
-      return;
-    }
-
-    const eventId = event.id || event.eventId;
-    const isInterested = event.interestedUsers?.includes(user.uid);
-    const eventRef = doc(db, 'events', eventId);
-
-    try {
-      await updateDoc(eventRef, {
-        interestedUsers: isInterested ? arrayRemove(user.uid) : arrayUnion(user.uid)
-      });
-      toast({
-        title: isInterested ? "Interest Removed" : "Marked as Interested",
-        description: isInterested ? "You are no longer following this event." : "You're now tracking this event!",
-      });
-    } catch (e: any) {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Could not update interest.",
-      });
-    }
+  const handleOpenInterest = (event: any) => {
+    setSelectedEvent(event);
+    setInterestEmail(user?.email || '');
+    setInterestSubmitted(false);
+    setShowInterestDialog(true);
   };
 
-  const ticketJsonLd = {
-    '@context': 'https://schema.org',
-    '@type': 'CollectionPage',
-    name: 'Ticket Hub',
-    description: 'Find and buy tickets for the best musical events in Botswana.',
-    url: 'https://gigconnect.bw/tickets',
+  const handleConfirmInterest = async () => {
+    if (!interestEmail || !selectedEvent) return;
+    setSubmittingInterest(true);
+    
+    try {
+      const eventId = selectedEvent.id || selectedEvent.eventId;
+      const eventRef = doc(db, 'events', eventId);
+      
+      await updateDoc(eventRef, {
+        interestedUsers: arrayUnion(interestEmail)
+      });
+      
+      setInterestSubmitted(true);
+      toast({ title: "Interest Registered", description: "Confirmation sent! You can now see owner details." });
+    } catch (e: any) {
+      toast({ variant: "destructive", title: "Error", description: "Could not register interest. Please try again." });
+    } finally {
+      setSubmittingInterest(false);
+    }
   };
 
   return (
     <div className="min-h-screen bg-secondary/10">
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(ticketJsonLd) }}
-      />
       <Navbar />
       <main className="container mx-auto py-12 px-4 max-w-7xl">
         <header className="mb-12 space-y-6">
@@ -131,7 +128,7 @@ export default function BuyTicketsPage() {
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
             {filteredEvents.map((event: any) => {
               const interestCount = event.interestedUsers?.length || 0;
-              const isInterested = user && event.interestedUsers?.includes(user.uid);
+              const isInterested = (user && event.interestedUsers?.includes(user.uid)) || (interestSuccess && selectedEvent?.id === event.id);
 
               return (
                 <Card key={event.id} className="border-none shadow-md hover:shadow-xl transition-all overflow-hidden flex flex-col group slide-up">
@@ -168,8 +165,8 @@ export default function BuyTicketsPage() {
                     <Button 
                       variant="outline" 
                       className={`flex-1 font-bold gap-2 text-[11px] uppercase tracking-wider ${isInterested ? 'bg-red-50 text-red-500 border-red-200 hover:bg-red-100' : 'text-muted-foreground'}`}
-                      onClick={() => handleToggleInterest(event)}
-                      aria-label={isInterested ? "Remove interest from this event" : "Mark as interested in this event"}
+                      onClick={() => handleOpenInterest(event)}
+                      aria-label="Register interest in this event"
                     >
                       <Heart className={`h-4 w-4 ${isInterested ? 'fill-red-500' : ''}`} aria-hidden="true" />
                       {isInterested ? 'Interested' : 'Interest'}
@@ -199,6 +196,73 @@ export default function BuyTicketsPage() {
           </Card>
         )}
       </main>
+
+      <Dialog open={showInterestDialog} onOpenChange={setShowInterestDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              {interestSuccess ? <CheckCircle2 className="h-6 w-6 text-green-500" /> : <Heart className="h-6 w-6 text-accent" />}
+              {interestSuccess ? "Interest Registered!" : `Interested in ${selectedEvent?.title}?`}
+            </DialogTitle>
+            <DialogDescription>
+              {interestSuccess 
+                ? "An email confirmation has been sent to your spot. You can now contact the organizer directly."
+                : "No login required! Just provide your email to stay updated on this gig and see the owner's contact info."}
+            </DialogDescription>
+          </DialogHeader>
+          
+          {!interestSuccess ? (
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="interest-email">Your Email Address</Label>
+                <Input 
+                  id="interest-email" 
+                  type="email" 
+                  placeholder="name@example.com" 
+                  value={interestEmail}
+                  onChange={(e) => setInterestEmail(e.target.value)}
+                  className="h-11"
+                />
+              </div>
+            </div>
+          ) : (
+            <div className="py-6 space-y-4">
+              <div className="bg-primary/5 p-4 rounded-xl border border-primary/20 flex items-center gap-4">
+                <div className="h-12 w-12 rounded-full bg-accent flex items-center justify-center text-white">
+                  <MessageCircle className="h-6 w-6" />
+                </div>
+                <div>
+                  <p className="text-[10px] font-bold text-muted-foreground uppercase">Organizer Contact</p>
+                  <p className="font-bold text-primary">{selectedEvent?.ticketWhatsApp || "Contact via App"}</p>
+                </div>
+              </div>
+              <WhatsAppButton 
+                phoneNumber={selectedEvent?.ticketWhatsApp || ''} 
+                message={`Hi, I just registered interest in "${selectedEvent?.title}" via GigConnect. I'd like more details!`}
+                className="w-full bg-green-600 hover:bg-green-700 text-white font-bold h-12"
+              />
+            </div>
+          )}
+
+          <DialogFooter className="gap-2">
+            {!interestSuccess ? (
+              <>
+                <Button variant="ghost" onClick={() => setShowInterestDialog(false)}>Cancel</Button>
+                <Button 
+                  className="bg-accent hover:bg-accent/90 flex-1 font-bold" 
+                  onClick={handleConfirmInterest}
+                  disabled={!interestEmail || submittingInterest}
+                >
+                  {submittingInterest ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Mail className="h-4 w-4 mr-2" />}
+                  Register Interest
+                </Button>
+              </>
+            ) : (
+              <Button variant="outline" className="w-full" onClick={() => setShowInterestDialog(false)}>Close</Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

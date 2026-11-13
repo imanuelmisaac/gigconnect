@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { useUser, useFirestore, useCollection } from '@/firebase';
-import { collection, query, where, doc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
+import { collection, query, where, doc, updateDoc, arrayUnion } from 'firebase/firestore';
 import { 
   Loader2, 
   Calendar, 
@@ -13,15 +13,20 @@ import {
   TrendingUp,
   Users,
   Heart,
-  Ticket
+  Ticket,
+  CheckCircle2,
+  Mail,
+  MessageCircle
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Navbar } from '@/components/navbar';
 import { useToast } from '@/hooks/use-toast';
 import { WhatsAppButton } from '@/components/whatsapp-button';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
 import Link from 'next/link';
 
 export default function PublicEventsPage() {
@@ -29,6 +34,13 @@ export default function PublicEventsPage() {
   const db = useFirestore();
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState('');
+
+  // Interest Dialog States
+  const [showInterestDialog, setShowInterestDialog] = useState(false);
+  const [interestEmail, setInterestEmail] = useState('');
+  const [selectedEvent, setSelectedEvent] = useState<any>(null);
+  const [submittingInterest, setSubmittingInterest] = useState(false);
+  const [interestSuccess, setInterestSubmitted] = useState(false);
 
   const eventsQuery = useMemo(() => {
     if (!db) return null;
@@ -55,44 +67,36 @@ export default function PublicEventsPage() {
       });
   }, [rawEvents, searchTerm]);
 
-  const handleToggleInterest = async (event: any) => {
-    if (!user) {
-      toast({ 
-        title: "Interested?", 
-        description: "Please register or log in to show your interest and follow this event." 
-      });
-      return;
-    }
-    const eventId = event.id || event.eventId;
-    const isInterested = event.interestedUsers?.includes(user.uid);
-    const eventRef = doc(db, 'events', eventId);
-    try {
-      await updateDoc(eventRef, {
-        interestedUsers: isInterested ? arrayRemove(user.uid) : arrayUnion(user.uid)
-      });
-      toast({
-        title: isInterested ? "Interest Removed" : "Marked as Interested",
-        description: isInterested ? "You are no longer following this event." : "We'll count you in!",
-      });
-    } catch (e) {
-      toast({ variant: "destructive", title: "Error", description: "Could not update interest." });
-    }
+  const handleOpenInterest = (event: any) => {
+    setSelectedEvent(event);
+    setInterestEmail(user?.email || '');
+    setInterestSubmitted(false);
+    setShowInterestDialog(true);
   };
 
-  const collectionJsonLd = {
-    '@context': 'https://schema.org',
-    '@type': 'CollectionPage',
-    name: 'Gig Marketplace',
-    description: 'A curated list of musical gigs and talent opportunities in Botswana.',
-    url: 'https://gigconnect.bw/events',
+  const handleConfirmInterest = async () => {
+    if (!interestEmail || !selectedEvent) return;
+    setSubmittingInterest(true);
+    
+    try {
+      const eventId = selectedEvent.id || selectedEvent.eventId;
+      const eventRef = doc(db, 'events', eventId);
+      
+      await updateDoc(eventRef, {
+        interestedUsers: arrayUnion(interestEmail)
+      });
+      
+      setInterestSubmitted(true);
+      toast({ title: "Interest Logged", description: "You've been added to the event list!" });
+    } catch (e: any) {
+      toast({ variant: "destructive", title: "Error", description: "Failed to register interest." });
+    } finally {
+      setSubmittingInterest(false);
+    }
   };
 
   return (
     <div className="min-h-screen bg-secondary/10">
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(collectionJsonLd) }}
-      />
       <Navbar />
       <main className="container mx-auto py-12 px-4 max-w-7xl">
         <header className="mb-12 space-y-6">
@@ -126,7 +130,8 @@ export default function PublicEventsPage() {
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
             {filteredEvents.map((event: any) => {
               const interestCount = event.interestedUsers?.length || 0;
-              const isInterested = user && event.interestedUsers?.includes(user.uid);
+              const isInterestedInCard = interestSuccess && selectedEvent?.id === event.id;
+
               return (
                 <Card key={event.id} className="border-none shadow-md hover:shadow-xl transition-all overflow-hidden flex flex-col slide-up group">
                   <div className="h-2 bg-primary group-hover:bg-accent transition-colors" />
@@ -168,11 +173,11 @@ export default function PublicEventsPage() {
                       <Button 
                         variant="ghost" 
                         size="sm" 
-                        className={`px-3 ${isInterested ? 'text-red-500 hover:text-red-600' : 'text-muted-foreground hover:text-primary'}`}
-                        onClick={() => handleToggleInterest(event)}
-                        aria-label={isInterested ? "Remove interest from this event" : "Mark as interested in this event"}
+                        className={`px-3 ${isInterestedInCard ? 'text-red-500' : 'text-muted-foreground hover:text-primary'}`}
+                        onClick={() => handleOpenInterest(event)}
+                        aria-label="Express interest"
                       >
-                        <Heart className={`h-4 w-4 ${isInterested ? 'fill-red-500' : ''}`} aria-hidden="true" />
+                        <Heart className={`h-4 w-4 ${isInterestedInCard ? 'fill-red-500' : ''}`} aria-hidden="true" />
                       </Button>
                       <Link href={user ? "/artist/events" : "/register"} className="flex-1">
                         <Button className="w-full font-bold uppercase tracking-widest gap-2 bg-primary h-9 text-[10px]">
@@ -206,6 +211,73 @@ export default function PublicEventsPage() {
           </Card>
         )}
       </main>
+
+      <Dialog open={showInterestDialog} onOpenChange={setShowInterestDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              {interestSuccess ? <CheckCircle2 className="h-6 w-6 text-green-500" /> : <Heart className="h-6 w-6 text-primary" />}
+              {interestSuccess ? "Interest Received!" : "Interested in this gig?"}
+            </DialogTitle>
+            <DialogDescription>
+              {interestSuccess 
+                ? "Confirmation has been sent to your email. You can now contact the organizer directly."
+                : "No account needed. Enter your email to show interest and unlock the direct contact details for this event."}
+            </DialogDescription>
+          </DialogHeader>
+          
+          {!interestSuccess ? (
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="event-interest-email">Email Address</Label>
+                <Input 
+                  id="event-interest-email" 
+                  type="email" 
+                  placeholder="you@example.com" 
+                  value={interestEmail}
+                  onChange={(e) => setInterestEmail(e.target.value)}
+                  className="h-11"
+                />
+              </div>
+            </div>
+          ) : (
+            <div className="py-6 space-y-4">
+              <div className="bg-primary/5 p-4 rounded-xl border border-primary/20 flex items-center gap-4">
+                <div className="h-12 w-12 rounded-full bg-accent flex items-center justify-center text-white">
+                  <MessageCircle className="h-6 w-6" />
+                </div>
+                <div>
+                  <p className="text-[10px] font-bold text-muted-foreground uppercase">Organizer WhatsApp</p>
+                  <p className="font-bold text-primary">{selectedEvent?.ticketWhatsApp || "Available in Chat"}</p>
+                </div>
+              </div>
+              <WhatsAppButton 
+                phoneNumber={selectedEvent?.ticketWhatsApp || ''} 
+                message={`Hi, I'm interested in "${selectedEvent?.title}" saw it on GigConnect!`}
+                className="w-full bg-green-600 hover:bg-green-700 text-white font-bold h-12"
+              />
+            </div>
+          )}
+
+          <DialogFooter className="gap-2">
+            {!interestSuccess ? (
+              <>
+                <Button variant="ghost" onClick={() => setShowInterestDialog(false)}>Later</Button>
+                <Button 
+                  className="bg-primary hover:bg-primary/90 flex-1 font-bold" 
+                  onClick={handleConfirmInterest}
+                  disabled={!interestEmail || submittingInterest}
+                >
+                  {submittingInterest ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Mail className="h-4 w-4 mr-2" />}
+                  Register Interest
+                </Button>
+              </>
+            ) : (
+              <Button variant="outline" className="w-full" onClick={() => setShowInterestDialog(false)}>Done</Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

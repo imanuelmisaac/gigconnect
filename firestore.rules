@@ -57,27 +57,25 @@ service cloud.firestore {
     match /events/{eventId} {
       allow read: if true; // Public read for discovery and ticketing
       allow create: if isSignedIn() && request.resource.data.gigMakerId == request.auth.uid;
-      allow update: if isSignedIn() && (
-        resource.data.gigMakerId == request.auth.uid ||
-        (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['interestedUsers']))
-      );
+      
+      // Allow public users to update the interestedUsers array for guest registration
+      allow update: if (isSignedIn() && resource.data.gigMakerId == request.auth.uid) ||
+                    (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['interestedUsers']));
+                    
       allow delete: if isSignedIn() && (resource.data.gigMakerId == request.auth.uid);
 
       // Applications sub-collection
       match /applications/{applicationId} {
-        // Only the artist or the Gig Maker who owns the event can read
         allow read: if isSignedIn() && (
           request.auth.uid == applicationId || 
           get(/databases/$(database)/documents/events/$(eventId)).data.gigMakerId == request.auth.uid
         );
 
-        // Artist can only apply once (doc ID must be their UID)
         allow create: if isSignedIn() && 
           applicationId == request.auth.uid &&
           request.resource.data.artistId == request.auth.uid &&
           exists(/databases/$(database)/documents/events/$(eventId));
 
-        // Update allowed while pending or by Gig Maker for status changes
         allow update: if isSignedIn() && (
           (request.auth.uid == applicationId && resource.data.status == 'pending') ||
           get(/databases/$(database)/documents/events/$(eventId)).data.gigMakerId == request.auth.uid
