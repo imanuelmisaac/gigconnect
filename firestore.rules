@@ -13,7 +13,7 @@ service cloud.firestore {
       return isSignedIn() && (
         request.auth.uid == 'rJq93j6Mi5NuAPEPNDYpLtSgFfc2' ||
         (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
-         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('role', '') == 'admin')
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin')
       );
     }
 
@@ -51,41 +51,34 @@ service cloud.firestore {
     match /events/{eventId} {
       allow read: if isSignedIn();
       allow create: if isSignedIn() && request.resource.data.gigMakerId == request.auth.uid;
-      allow update: if isSignedIn() && (resource.data.gigMakerId == request.auth.uid || isAdmin());
-      allow delete: if isSignedIn() && (resource.data.gigMakerId == request.auth.uid || isAdmin());
+      allow update: if isSignedIn() && (resource.data.gigMakerId == request.auth.uid);
+      allow delete: if isSignedIn() && (resource.data.gigMakerId == request.auth.uid);
 
       match /applications/{applicationId} {
         // Read: Artist who applied or the Gig Maker who owns the event
         allow read: if isSignedIn() && (
           request.auth.uid == applicationId || 
-          isAdmin() ||
           (exists(/databases/$(database)/documents/events/$(eventId)) && 
-           request.auth.uid == get(/databases/$(database)/documents/events/$(eventId)).data.gigMakerId)
+           get(/databases/$(database)/documents/events/$(eventId)).data.gigMakerId == request.auth.uid)
         );
 
         // Create: Artist can apply if they are signed in and the application ID is their own UID.
-        // This naturally prevents "applying again" because document IDs are unique.
         allow create: if isSignedIn() && 
-          request.auth.uid == applicationId &&
-          request.resource.data.artistId == request.auth.uid &&
-          exists(/databases/$(database)/documents/artists/$(request.auth.uid));
+          applicationId == request.auth.uid &&
+          request.resource.data.artistId == request.auth.uid;
 
-        // Update: 
-        // 1. Artist can update their own application while it is still 'pending'
-        // 2. Gig Maker can update status (Accept/Reject)
+        // Update: Artist can update while pending, or Gig Maker can update status
         allow update: if isSignedIn() && (
           (request.auth.uid == applicationId && resource.data.status == 'pending') ||
           (exists(/databases/$(database)/documents/events/$(eventId)) && 
-           request.auth.uid == get(/databases/$(database)/documents/events/$(eventId)).data.gigMakerId) ||
-          isAdmin()
+           get(/databases/$(database)/documents/events/$(eventId)).data.gigMakerId == request.auth.uid)
         );
         
         // Delete: Artist can withdraw while pending, or Gig Maker can delete
         allow delete: if isSignedIn() && (
           (request.auth.uid == applicationId && resource.data.status == 'pending') || 
           (exists(/databases/$(database)/documents/events/$(eventId)) && 
-           request.auth.uid == get(/databases/$(database)/documents/events/$(eventId)).data.gigMakerId) ||
-          isAdmin()
+           get(/databases/$(database)/documents/events/$(eventId)).data.gigMakerId == request.auth.uid)
         );
       }
     }

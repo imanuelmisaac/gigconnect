@@ -1,4 +1,3 @@
-
 "use client"
 
 import { useEffect, useMemo, useState, useRef } from 'react';
@@ -58,6 +57,7 @@ export default function GigMakerDashboardPage() {
   const [eventToDelete, setEventToDelete] = useState<{ id: string, title: string } | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const cleanupPerformed = useRef(false);
+  const processingCleanup = useRef<Set<string>>(new Set());
 
   const gigMakerDocRef = useMemo(() => {
     if (!db || !user) return null;
@@ -74,9 +74,8 @@ export default function GigMakerDashboardPage() {
     );
   }, [db, user]);
 
-  const { data: rawEvents, loading: eventsLoading, error: eventsError } = useCollection(eventsQuery);
+  const { data: rawEvents, loading: eventsLoading } = useCollection(eventsQuery);
 
-  // Fetch Package 4 artists for recommendations
   const proArtistsQuery = useMemo(() => {
     if (!db) return null;
     return query(collection(db, 'artists'), where('subscriptionTier', '==', 'package4'));
@@ -114,7 +113,6 @@ export default function GigMakerDashboardPage() {
     }
   }, [user, userLoading, router, auth, toast]);
 
-  // AUTO-CLEANUP LOGIC
   useEffect(() => {
     if (!events || events.length === 0 || !db || cleanupPerformed.current) return;
 
@@ -124,7 +122,7 @@ export default function GigMakerDashboardPage() {
 
       for (const event of events) {
         const docId = event.id || event.eventId;
-        if (!docId) continue;
+        if (!docId || processingCleanup.current.has(docId)) continue;
 
         let shouldDelete = false;
         if (event.date) {
@@ -138,6 +136,7 @@ export default function GigMakerDashboardPage() {
         }
 
         if (shouldDelete) {
+          processingCleanup.current.add(docId);
           try {
             const appsRef = collection(db, 'events', docId, 'applications');
             const appsSnap = await getDocs(appsRef);
@@ -150,10 +149,8 @@ export default function GigMakerDashboardPage() {
             await deleteDoc(eventRef);
             deletedCount++;
           } catch (e: any) {
-            errorEmitter.emit('permission-error', new FirestorePermissionError({
-              path: `/events/${docId}`,
-              operation: 'delete',
-            }));
+            console.error(`Cleanup failed for ${docId}:`, e);
+            processingCleanup.current.delete(docId);
           }
         }
       }
@@ -184,7 +181,10 @@ export default function GigMakerDashboardPage() {
       toast({ title: "Event Deleted", description: `"${eventToDelete.title}" has been removed.` });
       setEventToDelete(null);
     } catch (e: any) {
-      toast({ variant: "destructive", title: "Error", description: "Failed to delete event." });
+      errorEmitter.emit('permission-error', new FirestorePermissionError({
+        path: `/events/${eventId}`,
+        operation: 'delete',
+      }));
     } finally {
       setIsDeleting(false);
     }
@@ -271,8 +271,7 @@ export default function GigMakerDashboardPage() {
             <section className="space-y-4">
               <h3 className="text-xl font-bold font-headline text-primary">Event Management</h3>
               <div className="grid gap-4">
-                {eventsLoading ? <Loader2 className="h-6 w-6 animate-spin mx-auto py-12" /> : 
-                  events && events.length > 0 ? events.map((event: any) => (
+                {events && events.length > 0 ? events.map((event: any) => (
                     <Card key={event.id} className="border-none shadow-sm group overflow-hidden">
                       <CardContent className="p-4 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
                         <div className="flex items-center gap-4">
