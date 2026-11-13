@@ -1,17 +1,17 @@
-
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { useUser, useFirestore } from '@/firebase';
+import { useUser, useFirestore, useDoc } from '@/firebase';
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Briefcase, MapPin, MessageCircle, Building2, Loader2, ArrowRight } from 'lucide-react';
+import { Briefcase, MapPin, MessageCircle, Building2, Loader2, ArrowRight, ArrowLeft } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import Link from 'next/link';
 
 const COUNTRY_FLAGS: Record<string, string> = {
   '+267': '🇧🇼',
@@ -36,12 +36,16 @@ export default function GigMakerSetupPage() {
   const { toast } = useToast();
 
   const [loading, setLoading] = useState(false);
+  const [isDataLoaded, setIsDataLoaded] = useState(false);
   const [formData, setFormData] = useState({
     businessName: '',
     role: '',
     location: '',
     whatsappNumber: '',
   });
+
+  const profileRef = useMemo(() => (user ? doc(db, 'gig-makers', user.uid) : null), [db, user]);
+  const { data: profile, loading: profileLoading } = useDoc(profileRef);
 
   // Detect flag based on phone number
   const detectedFlag = useMemo(() => {
@@ -58,6 +62,18 @@ export default function GigMakerSetupPage() {
     
     return null;
   }, [formData.whatsappNumber]);
+
+  useEffect(() => {
+    if (profile && !isDataLoaded) {
+      setFormData({
+        businessName: profile.businessName || '',
+        role: profile.role || '',
+        location: profile.location || '',
+        whatsappNumber: profile.whatsappNumber || '',
+      });
+      setIsDataLoaded(true);
+    }
+  }, [profile, isDataLoaded]);
 
   useEffect(() => {
     if (!userLoading && !user) {
@@ -102,15 +118,18 @@ export default function GigMakerSetupPage() {
         role: formData.role,
         location: formData.location,
         whatsappNumber: formData.whatsappNumber,
-        createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
+        // Only set createdAt if it doesn't exist
+        ...(!profile && { createdAt: serverTimestamp() })
       };
 
       await setDoc(doc(db, 'gig-makers', user.uid), gigMakerData, { merge: true });
 
       toast({
-        title: "Profile Saved!",
-        description: "Your business profile has been successfully created.",
+        title: isDataLoaded ? "Profile Updated!" : "Profile Saved!",
+        description: isDataLoaded 
+          ? "Your business details have been updated." 
+          : "Your business profile has been successfully created.",
       });
 
       router.push('/gig-maker/dashboard');
@@ -125,7 +144,7 @@ export default function GigMakerSetupPage() {
     }
   };
 
-  if (userLoading) {
+  if (userLoading || profileLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-secondary/10">
         <Loader2 className="h-10 w-10 animate-spin text-primary" />
@@ -136,14 +155,26 @@ export default function GigMakerSetupPage() {
   return (
     <div className="min-h-screen bg-secondary/10 py-12 px-4">
       <div className="max-w-xl mx-auto space-y-8 slide-up">
+        <div className="flex items-center justify-between">
+           <Link href="/gig-maker/dashboard">
+            <Button variant="ghost" size="sm" className="gap-2">
+              <ArrowLeft className="h-4 w-4" /> Back to Dashboard
+            </Button>
+           </Link>
+        </div>
+
         <div className="text-center space-y-2">
           <div className="flex justify-center">
             <div className="bg-primary p-3 rounded-xl shadow-lg text-white">
               <Building2 className="h-8 w-8" />
             </div>
           </div>
-          <h1 className="text-3xl font-bold tracking-tight text-primary font-headline">Business Setup</h1>
-          <p className="text-muted-foreground text-lg">Complete your business profile to start hiring talent.</p>
+          <h1 className="text-3xl font-bold tracking-tight text-primary font-headline">
+            {isDataLoaded ? 'Edit Business Profile' : 'Business Setup'}
+          </h1>
+          <p className="text-muted-foreground text-lg">
+            {isDataLoaded ? 'Update your venue or organization details.' : 'Complete your business profile to start hiring talent.'}
+          </p>
         </div>
 
         <Card className="border-none shadow-xl">
@@ -226,13 +257,13 @@ export default function GigMakerSetupPage() {
                   </>
                 ) : (
                   <>
-                    Complete Setup
+                    {isDataLoaded ? 'Update Profile' : 'Complete Setup'}
                     <ArrowRight className="h-5 w-5" />
                   </>
                 )}
               </Button>
               <p className="text-center text-xs text-muted-foreground">
-                You can update these details later from your dashboard settings.
+                You can always come back and update these details.
               </p>
             </CardFooter>
           </form>
