@@ -149,9 +149,6 @@ export default function Home() {
           </div>
           <div className="space-y-2">
             <p className="text-muted-foreground font-medium italic">"Made by a Motswana for Batswana in Botswana"</p>
-            <p className="text-sm text-primary/70 font-bold">
-              Mogakolodi Ranthokwane
-            </p>
           </div>
           <nav className="pt-8 border-t max-w-xs mx-auto" aria-label="Footer Navigation">
             <ul className="flex justify-center gap-4 mb-4 text-xs font-bold text-muted-foreground uppercase tracking-widest">
