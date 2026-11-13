@@ -37,7 +37,7 @@ service cloud.firestore {
 
     // Artists/DJs Collection
     match /artists/{artistId} {
-      allow read: if isSignedIn();
+      allow read: if true; // Allow browsing talent
       allow write: if isSignedIn() && request.auth.uid == artistId;
 
       match /features/{requestId} {
@@ -50,23 +50,24 @@ service cloud.firestore {
 
     // Gig Makers Collection
     match /gig-makers/{userId} {
-      allow read: if isSignedIn();
+      allow read: if true; // Allow browsing business profiles
       allow write: if isSignedIn() && request.auth.uid == userId;
     }
 
     // Events Collection
     match /events/{eventId} {
-      allow read: if isSignedIn();
+      allow read: if true; // PUBLIC READ - Fixes events not displaying for guests
       allow create: if isSignedIn() && request.resource.data.gigMakerId == request.auth.uid;
-      allow update: if isSignedIn() && (resource.data.gigMakerId == request.auth.uid);
+      allow update: if isSignedIn() && (
+        resource.data.gigMakerId == request.auth.uid ||
+        (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['interestedUsers']))
+      );
       allow delete: if isSignedIn() && (resource.data.gigMakerId == request.auth.uid);
 
       match /applications/{applicationId} {
-        // ID must be the artist's UID
         allow read: if isSignedIn() && (
           request.auth.uid == applicationId || 
-          (exists(/databases/$(database)/documents/events/$(eventId)) && 
-           get(/databases/$(database)/documents/events/$(eventId)).data.gigMakerId == request.auth.uid)
+          get(/databases/$(database)/documents/events/$(eventId)).data.gigMakerId == request.auth.uid
         );
 
         allow create: if isSignedIn() && 
@@ -75,14 +76,12 @@ service cloud.firestore {
 
         allow update: if isSignedIn() && (
           (request.auth.uid == applicationId && resource.data.status == 'pending') ||
-          (exists(/databases/$(database)/documents/events/$(eventId)) && 
-           get(/databases/$(database)/documents/events/$(eventId)).data.gigMakerId == request.auth.uid)
+          get(/databases/$(database)/documents/events/$(eventId)).data.gigMakerId == request.auth.uid
         );
         
         allow delete: if isSignedIn() && (
           (request.auth.uid == applicationId && resource.data.status == 'pending') || 
-          (exists(/databases/$(database)/documents/events/$(eventId)) && 
-           get(/databases/$(database)/documents/events/$(eventId)).data.gigMakerId == request.auth.uid)
+          get(/databases/$(database)/documents/events/$(eventId)).data.gigMakerId == request.auth.uid
         );
       }
     }

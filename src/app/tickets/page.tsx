@@ -3,7 +3,7 @@
 
 import { useMemo, useState } from 'react';
 import { useUser, useFirestore, useCollection } from '@/firebase';
-import { collection, query, where, orderBy, doc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
+import { collection, query, where, doc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { 
   Loader2, 
   Calendar, 
@@ -32,29 +32,35 @@ export default function BuyTicketsPage() {
 
   const eventsQuery = useMemo(() => {
     if (!db) return null;
+    // Simplified query for public ticketing
     return query(
       collection(db, 'events'),
-      where('status', '==', 'Open'),
-      where('paymentStatus', '==', 'Complete'),
-      orderBy('createdAt', 'desc')
+      where('status', '==', 'Open')
     );
   }, [db]);
 
-  const { data: events, loading } = useCollection(eventsQuery);
+  const { data: rawEvents, loading } = useCollection(eventsQuery);
 
   const filteredEvents = useMemo(() => {
-    if (!events) return [];
-    return events.filter((e: any) => 
-      e.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      e.location?.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-  }, [events, searchTerm]);
+    if (!rawEvents) return [];
+    return rawEvents
+      .filter((e: any) => e.paymentStatus === 'Complete')
+      .filter((e: any) => 
+        e.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        e.location?.toLowerCase().includes(searchTerm.toLowerCase())
+      )
+      .sort((a: any, b: any) => {
+        const dateA = a.date || '';
+        const dateB = b.date || '';
+        return dateA.localeCompare(dateB);
+      });
+  }, [rawEvents, searchTerm]);
 
   const handleToggleInterest = async (event: any) => {
     if (!user) {
       toast({
-        title: "Login Required",
-        description: "Please log in to show interest in events.",
+        title: "Interested?",
+        description: "Log in or register to follow events and save your interests.",
       });
       return;
     }
@@ -69,7 +75,7 @@ export default function BuyTicketsPage() {
       });
       toast({
         title: isInterested ? "Interest Removed" : "Marked as Interested",
-        description: isInterested ? "You are no longer interested in this event." : "We'll show you as interested!",
+        description: isInterested ? "You are no longer following this event." : "You're now tracking this event!",
       });
     } catch (e: any) {
       toast({
@@ -90,8 +96,8 @@ export default function BuyTicketsPage() {
               <div className="inline-flex items-center gap-2 px-2 py-0.5 rounded bg-accent/10 text-accent text-[10px] font-bold uppercase tracking-wider">
                 <TrendingUp className="h-3 w-3" /> Upcoming Events
               </div>
-              <h1 className="text-4xl lg:text-5xl font-extrabold text-primary font-headline uppercase tracking-tighter">Ticket Hub</h1>
-              <p className="text-muted-foreground text-lg max-w-xl">Find your next night out. Buy tickets directly from organizers.</p>
+              <h1 className="text-4xl lg:text-5xl font-extrabold text-primary font-headline uppercase tracking-tighter text-balance">Ticket Hub</h1>
+              <p className="text-muted-foreground text-lg max-w-xl">Find your next night out. Buy tickets directly from organizers via WhatsApp.</p>
             </div>
             <div className="relative w-full md:max-w-md">
               <Search className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
@@ -150,15 +156,15 @@ export default function BuyTicketsPage() {
                   <CardFooter className="bg-muted/30 pt-6 gap-2">
                     <Button 
                       variant="outline" 
-                      className={`flex-1 font-bold gap-2 ${isInterested ? 'bg-red-50 text-red-500 border-red-200' : ''}`}
+                      className={`flex-1 font-bold gap-2 ${isInterested ? 'bg-red-50 text-red-500 border-red-200 hover:bg-red-100' : 'text-muted-foreground'}`}
                       onClick={() => handleToggleInterest(event)}
                     >
                       <Heart className={`h-4 w-4 ${isInterested ? 'fill-red-500' : ''}`} />
-                      {isInterested ? 'Interested' : 'Show Interest'}
+                      {isInterested ? 'Interested' : 'Interest'}
                     </Button>
                     <WhatsAppButton 
                       phoneNumber={event.ticketWhatsApp || ''} 
-                      message={`Hi, I'm interested in buying tickets for "${event.title}" on ${event.date}.`}
+                      message={`Hi, I'm interested in buying tickets for "${event.title}" on ${event.date}. Saw this on GigConnect.`}
                       className="flex-1 bg-accent hover:bg-accent/90 text-white font-bold gap-2"
                       disabled={!event.ticketWhatsApp}
                     >

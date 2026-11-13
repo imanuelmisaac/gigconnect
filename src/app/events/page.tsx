@@ -3,7 +3,7 @@
 
 import { useMemo, useState } from 'react';
 import { useUser, useFirestore, useCollection } from '@/firebase';
-import { collection, query, where, orderBy, doc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
+import { collection, query, where, doc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { 
   Loader2, 
   Calendar, 
@@ -12,7 +12,6 @@ import {
   Music, 
   ArrowRight,
   TrendingUp,
-  CreditCard,
   Users,
   Heart
 } from 'lucide-react';
@@ -32,27 +31,37 @@ export default function PublicEventsPage() {
 
   const eventsQuery = useMemo(() => {
     if (!db) return null;
+    // Simplified query for better reliability on public display
     return query(
       collection(db, 'events'),
-      where('status', '==', 'Open'),
-      where('paymentStatus', '==', 'Complete'),
-      orderBy('createdAt', 'desc')
+      where('status', '==', 'Open')
     );
   }, [db]);
 
-  const { data: events, loading } = useCollection(eventsQuery);
+  const { data: rawEvents, loading } = useCollection(eventsQuery);
 
   const filteredEvents = useMemo(() => {
-    if (!events) return [];
-    return events.filter((e: any) => 
-      e.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      e.location?.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-  }, [events, searchTerm]);
+    if (!rawEvents) return [];
+    // Client side filter for paymentStatus to avoid complex index requirement for guests
+    return rawEvents
+      .filter((e: any) => e.paymentStatus === 'Complete')
+      .filter((e: any) => 
+        e.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        e.location?.toLowerCase().includes(searchTerm.toLowerCase())
+      )
+      .sort((a: any, b: any) => {
+        const dateA = a.createdAt?.seconds || 0;
+        const dateB = b.createdAt?.seconds || 0;
+        return dateB - dateA;
+      });
+  }, [rawEvents, searchTerm]);
 
   const handleToggleInterest = async (event: any) => {
     if (!user) {
-      toast({ title: "Login Required", description: "Please log in to show interest." });
+      toast({ 
+        title: "Interested?", 
+        description: "Please register or log in to show your interest and follow this event." 
+      });
       return;
     }
     const eventId = event.id || event.eventId;
@@ -61,6 +70,10 @@ export default function PublicEventsPage() {
     try {
       await updateDoc(eventRef, {
         interestedUsers: isInterested ? arrayRemove(user.uid) : arrayUnion(user.uid)
+      });
+      toast({
+        title: isInterested ? "Interest Removed" : "Marked as Interested",
+        description: isInterested ? "You are no longer following this event." : "We'll count you in!",
       });
     } catch (e) {
       toast({ variant: "destructive", title: "Error", description: "Could not update interest." });
@@ -77,8 +90,8 @@ export default function PublicEventsPage() {
               <div className="inline-flex items-center gap-2 px-2 py-0.5 rounded bg-primary/10 text-primary text-[10px] font-bold uppercase tracking-wider">
                 <TrendingUp className="h-3 w-3" /> Live Gigs
               </div>
-              <h1 className="text-4xl lg:text-5xl font-extrabold text-primary font-headline uppercase tracking-tighter">Event Marketplace</h1>
-              <p className="text-muted-foreground text-lg max-w-xl">Verified performances and opportunities for Batswana talent.</p>
+              <h1 className="text-4xl lg:text-5xl font-extrabold text-primary font-headline uppercase tracking-tighter text-balance">Gig Marketplace</h1>
+              <p className="text-muted-foreground text-lg max-w-xl">Browse verified musical performances and talent opportunities across Botswana.</p>
             </div>
             <div className="relative w-full md:max-w-md">
               <Search className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
@@ -142,14 +155,14 @@ export default function PublicEventsPage() {
                     <Button 
                       variant="ghost" 
                       size="sm" 
-                      className={`px-3 ${isInterested ? 'text-red-500' : ''}`}
+                      className={`px-3 ${isInterested ? 'text-red-500 hover:text-red-600' : 'text-muted-foreground hover:text-primary'}`}
                       onClick={() => handleToggleInterest(event)}
                     >
                       <Heart className={`h-4 w-4 ${isInterested ? 'fill-red-500' : ''}`} />
                     </Button>
-                    <Link href="/login" className="flex-1">
+                    <Link href={user ? "/artist/events" : "/register"} className="flex-1">
                       <Button className="w-full font-bold uppercase tracking-widest gap-2 bg-primary h-9">
-                        Apply to Perform <ArrowRight className="h-4 w-4" />
+                        {user ? "Apply Now" : "Register to Apply"} <ArrowRight className="h-4 w-4" />
                       </Button>
                     </Link>
                   </CardFooter>
