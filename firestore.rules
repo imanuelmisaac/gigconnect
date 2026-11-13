@@ -1,3 +1,4 @@
+
 rules_version = '2';
 
 service cloud.firestore {
@@ -20,6 +21,12 @@ service cloud.firestore {
     // Master Override for Admins
     match /{document=**} {
       allow read, write: if isAdmin();
+    }
+
+    // System Config
+    match /system/config {
+      allow read: if true; // Publicly readable for pricing
+      allow write: if isAdmin();
     }
 
     // Users Collection
@@ -55,26 +62,23 @@ service cloud.firestore {
       allow delete: if isSignedIn() && (resource.data.gigMakerId == request.auth.uid);
 
       match /applications/{applicationId} {
-        // Read: Artist who applied or the Gig Maker who owns the event
+        // ID must be the artist's UID
         allow read: if isSignedIn() && (
           request.auth.uid == applicationId || 
           (exists(/databases/$(database)/documents/events/$(eventId)) && 
            get(/databases/$(database)/documents/events/$(eventId)).data.gigMakerId == request.auth.uid)
         );
 
-        // Create: Artist can apply if they are signed in and the application ID is their own UID.
         allow create: if isSignedIn() && 
           applicationId == request.auth.uid &&
           request.resource.data.artistId == request.auth.uid;
 
-        // Update: Artist can update while pending, or Gig Maker can update status
         allow update: if isSignedIn() && (
           (request.auth.uid == applicationId && resource.data.status == 'pending') ||
           (exists(/databases/$(database)/documents/events/$(eventId)) && 
            get(/databases/$(database)/documents/events/$(eventId)).data.gigMakerId == request.auth.uid)
         );
         
-        // Delete: Artist can withdraw while pending, or Gig Maker can delete
         allow delete: if isSignedIn() && (
           (request.auth.uid == applicationId && resource.data.status == 'pending') || 
           (exists(/databases/$(database)/documents/events/$(eventId)) && 
@@ -83,7 +87,6 @@ service cloud.firestore {
       }
     }
     
-    // Allow collection group queries for apps
     match /{path=**}/applications/{applicationId} {
       allow read, list: if isSignedIn() && request.auth.uid == applicationId;
     }

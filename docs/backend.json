@@ -305,6 +305,21 @@
         "status",
         "price"
       ]
+    },
+    "SystemConfig": {
+      "title": "System Config",
+      "description": "Global application settings and pricing",
+      "type": "object",
+      "properties": {
+        "eventFee": { "type": "number", "default": 25 },
+        "package2Price": { "type": "number", "default": 20 },
+        "package3Price": { "type": "number", "default": 60 },
+        "package4Price": { "type": "number", "default": 80 },
+        "specialActive": { "type": "boolean", "default": false },
+        "specialDiscount": { "type": "number", "default": 0 },
+        "specialName": { "type": "string" },
+        "specialExpires": { "type": "string", "format": "date" }
+      }
     }
   },
   "auth": {
@@ -332,6 +347,10 @@
     "/events/{eventId}/applications/{applicationId}": {
       "schema": "Application",
       "description": "Applications from artists to a specific event"
+    },
+    "/system/config": {
+      "schema": "SystemConfig",
+      "description": "Global app configuration"
     }
   }
 }
