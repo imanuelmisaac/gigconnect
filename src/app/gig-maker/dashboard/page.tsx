@@ -22,7 +22,10 @@ import {
   Trash2,
   AlertTriangle,
   Star,
-  Sparkles
+  Sparkles,
+  Heart,
+  Mail,
+  X
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -39,10 +42,19 @@ import {
   AlertDialogHeader, 
   AlertDialogTitle
 } from '@/components/ui/alert-dialog';
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogDescription, 
+  DialogHeader, 
+  DialogTitle, 
+  DialogFooter 
+} from '@/components/ui/dialog';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { WhatsAppButton } from '@/components/whatsapp-button';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 export default function GigMakerDashboardPage() {
   const { user, loading: userLoading } = useUser();
@@ -52,6 +64,7 @@ export default function GigMakerDashboardPage() {
   const { toast } = useToast();
 
   const [eventToDelete, setEventToDelete] = useState<{ id: string, title: string } | null>(null);
+  const [interestEvent, setInterestEvent] = useState<any>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const cleanupPerformed = useRef(false);
   const processingCleanup = useRef<Set<string>>(new Set());
@@ -180,7 +193,7 @@ export default function GigMakerDashboardPage() {
       errorEmitter.emit('permission-error', new FirestorePermissionError({
         path: `/events/${eventId}`,
         operation: 'delete',
-      }));
+      } as SecurityRuleContext));
     } finally {
       setIsDeleting(false);
     }
@@ -283,6 +296,14 @@ export default function GigMakerDashboardPage() {
                             <div className="flex items-center text-[10px] text-muted-foreground gap-3">
                               <span className="flex items-center gap-0.5"><MapPin className="h-2 w-2" /> {event.location}</span>
                               <span className="flex items-center gap-0.5"><Clock className="h-2 w-2" /> {event.date}</span>
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                className="h-auto p-0 text-[10px] text-accent hover:text-accent/80 gap-1"
+                                onClick={() => setInterestEvent(event)}
+                              >
+                                <Heart className="h-2.5 w-2.5 fill-accent" /> {event.interestedUsers?.length || 0} Interested
+                              </Button>
                             </div>
                           </div>
                         </div>
@@ -363,6 +384,7 @@ export default function GigMakerDashboardPage() {
         </div>
       </main>
 
+      {/* Delete Event Dialog */}
       <AlertDialog open={!!eventToDelete} onOpenChange={(open) => !open && setEventToDelete(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -375,6 +397,60 @@ export default function GigMakerDashboardPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Interested Users Dialog */}
+      <Dialog open={!!interestEvent} onOpenChange={(open) => !open && setInterestEvent(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-primary">
+              <Heart className="h-6 w-6 text-accent fill-accent" />
+              Interested Customers
+            </DialogTitle>
+            <DialogDescription>
+              People who expressed interest in <strong>{interestEvent?.title}</strong>.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="py-4">
+            <ScrollArea className="h-[300px] rounded-md border p-4 bg-secondary/10">
+              {interestEvent?.interestedUsers && interestEvent.interestedUsers.length > 0 ? (
+                <div className="space-y-3">
+                  {interestEvent.interestedUsers.map((email: string, idx: number) => (
+                    <div key={idx} className="flex items-center justify-between p-2 rounded bg-white shadow-sm border border-primary/10">
+                      <div className="flex items-center gap-3">
+                        <div className="bg-primary/10 p-2 rounded-full">
+                          <Mail className="h-4 w-4 text-primary" />
+                        </div>
+                        <span className="text-sm font-medium">{email}</span>
+                      </div>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="h-8 w-8 p-0"
+                        onClick={() => {
+                          navigator.clipboard.writeText(email);
+                          toast({ title: "Email Copied" });
+                        }}
+                      >
+                        <Settings className="h-4 w-4 text-muted-foreground" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="h-full flex flex-col items-center justify-center text-center opacity-50 space-y-2">
+                  <Mail className="h-8 w-8" />
+                  <p className="text-xs">No interest registered yet.</p>
+                </div>
+              )}
+            </ScrollArea>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" className="w-full" onClick={() => setInterestEvent(null)}>Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
