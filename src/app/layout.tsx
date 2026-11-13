@@ -10,25 +10,52 @@ export const viewport: Viewport = {
   themeColor: '#1a365d',
 };
 
+const baseUrl = 'https://gigconnect.bw';
+
 export const metadata: Metadata = {
+  metadataBase: new URL(baseUrl),
   title: {
     default: 'GigConnect | Botswana Musical Talent & Event Hub',
     template: '%s | GigConnect',
   },
   description: 'The home for Batswana musical excellence. Find gigs, hire professional DJs and artists, and buy event tickets across Botswana.',
-  keywords: ['Botswana music', 'Gaborone events', 'Amapiano Botswana', 'Motswako', 'Hire DJ Botswana', 'GigConnect'],
+  keywords: ['Botswana music', 'Gaborone events', 'Amapiano Botswana', 'Motswako', 'Hire DJ Botswana', 'GigConnect', 'Botswana Gigs'],
   authors: [{ name: 'Mogakolodi Ranthokwane' }],
+  alternates: {
+    canonical: '/',
+  },
   openGraph: {
     type: 'website',
     locale: 'en_BW',
-    url: 'https://gigconnect.bw',
+    url: baseUrl,
     siteName: 'GigConnect',
     title: 'GigConnect | Connect with the Beat of Botswana',
     description: 'Find talent, discover gigs, and buy tickets for the best events in Botswana.',
+    images: [
+      {
+        url: '/og-image.jpg',
+        width: 1200,
+        height: 630,
+        alt: 'GigConnect Botswana',
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'GigConnect | Botswana Musical Talent Hub',
+    description: 'Discover the best talent and events in Botswana.',
+    images: ['/og-image.jpg'],
   },
   robots: {
     index: true,
     follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-video-preview': -1,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+    },
   },
 };
 

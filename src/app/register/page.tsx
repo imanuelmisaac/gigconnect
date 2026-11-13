@@ -1,5 +1,3 @@
-"use client"
-
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -15,6 +13,13 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Briefcase, ArrowLeft, Loader2, Mail, AlertTriangle, Eye, EyeOff } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: 'Register',
+  description: 'Join the GigConnect network as an artist, DJ, or gig maker.',
+  robots: 'noindex, nofollow',
+};
 
 export default function RegisterPage() {
   const [email, setEmail] = useState('');
@@ -92,7 +97,7 @@ export default function RegisterPage() {
           <CardHeader>
             <div className="flex justify-center mb-4">
               <div className="bg-green-100 p-4 rounded-full">
-                <Mail className="h-12 w-12 text-green-600" />
+                <Mail className="h-12 w-12 text-green-600" aria-hidden="true" />
               </div>
             </div>
             <CardTitle className="text-2xl font-headline">Verify Your Email</CardTitle>
@@ -124,16 +129,16 @@ export default function RegisterPage() {
     <div className="min-h-screen flex flex-col bg-secondary/20">
       <div className="p-4">
         <Link href="/" className="inline-flex items-center text-sm text-muted-foreground hover:text-primary transition-colors">
-          <ArrowLeft className="mr-2 h-4 w-4" />
+          <ArrowLeft className="mr-2 h-4 w-4" aria-hidden="true" />
           Back to Home
         </Link>
       </div>
-      <div className="flex-1 flex items-center justify-center p-4">
+      <main className="flex-1 flex items-center justify-center p-4">
         <div className="w-full max-w-md space-y-8 slide-up">
           <div className="text-center space-y-2">
             <div className="flex justify-center">
               <div className="bg-primary p-3 rounded-xl shadow-lg">
-                <Briefcase className="h-8 w-8 text-white" />
+                <Briefcase className="h-8 w-8 text-white" aria-hidden="true" />
               </div>
             </div>
             <h1 className="text-3xl font-bold tracking-tight text-primary font-headline">Create an Account</h1>
@@ -142,7 +147,7 @@ export default function RegisterPage() {
 
           {setupError && (
             <Alert variant="destructive" className="bg-red-50 border-red-200">
-              <AlertTriangle className="h-4 w-4" />
+              <AlertTriangle className="h-4 w-4" aria-hidden="true" />
               <AlertTitle className="font-bold">Setup Required</AlertTitle>
               <AlertDescription>
                 {setupError}
@@ -169,6 +174,7 @@ export default function RegisterPage() {
                       className="h-11"
                       value={firstName}
                       onChange={(e) => setFirstName(e.target.value)}
+                      autoComplete="given-name"
                     />
                   </div>
                   <div className="grid gap-2">
@@ -180,13 +186,14 @@ export default function RegisterPage() {
                       className="h-11"
                       value={lastName}
                       onChange={(e) => setLastName(e.target.value)}
+                      autoComplete="family-name"
                     />
                   </div>
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor="role">I am a...</Label>
                   <Select value={role} onValueChange={(val: any) => setRole(val)}>
-                    <SelectTrigger className="h-11">
+                    <SelectTrigger className="h-11" id="role">
                       <SelectValue placeholder="Select your role" />
                     </SelectTrigger>
                     <SelectContent>
@@ -206,6 +213,7 @@ export default function RegisterPage() {
                     className="h-11"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
+                    autoComplete="email"
                   />
                 </div>
                 <div className="grid gap-2">
@@ -219,13 +227,15 @@ export default function RegisterPage() {
                       className="h-11 pr-10"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
+                      autoComplete="new-password"
                     />
                     <button
                       type="button"
                       className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-primary transition-colors"
                       onClick={() => setShowPassword(!showPassword)}
+                      aria-label={showPassword ? "Hide password" : "Show password"}
                     >
-                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      {showPassword ? <EyeOff className="h-4 w-4" aria-hidden="true" /> : <Eye className="h-4 w-4" aria-hidden="true" />}
                     </button>
                   </div>
                 </div>
@@ -253,7 +263,7 @@ export default function RegisterPage() {
                 <Button type="submit" className="w-full h-11 bg-primary text-lg" disabled={loading || !agreedToTerms}>
                   {loading ? (
                     <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
                       Creating Account...
                     </>
                   ) : (
@@ -270,7 +280,7 @@ export default function RegisterPage() {
             </form>
           </Card>
         </div>
-      </div>
+      </main>
     </div>
   );
 }

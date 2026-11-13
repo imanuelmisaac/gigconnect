@@ -1,6 +1,3 @@
-
-'use client';
-
 import { useMemo, useState } from 'react';
 import { useUser, useFirestore, useCollection } from '@/firebase';
 import { collection, query, where, doc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
@@ -24,6 +21,15 @@ import { Navbar } from '@/components/navbar';
 import { useToast } from '@/hooks/use-toast';
 import { WhatsAppButton } from '@/components/whatsapp-button';
 import Link from 'next/link';
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: 'Gig Marketplace | Find Music Gigs in Botswana',
+  description: 'Explore live musical performances, DJ sets, and artist opportunities across Gaborone, Francistown, and more. Apply for verified gigs today.',
+  alternates: {
+    canonical: '/events',
+  },
+};
 
 export default function PublicEventsPage() {
   const { user } = useUser();
@@ -80,33 +86,46 @@ export default function PublicEventsPage() {
     }
   };
 
+  const collectionJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'CollectionPage',
+    name: 'Gig Marketplace',
+    description: 'A curated list of musical gigs and talent opportunities in Botswana.',
+    url: 'https://gigconnect.bw/events',
+  };
+
   return (
     <div className="min-h-screen bg-secondary/10">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(collectionJsonLd) }}
+      />
       <Navbar />
       <main className="container mx-auto py-12 px-4 max-w-7xl">
         <header className="mb-12 space-y-6">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
             <div className="space-y-2">
               <div className="inline-flex items-center gap-2 px-2 py-0.5 rounded bg-primary/10 text-primary text-[10px] font-bold uppercase tracking-wider">
-                <TrendingUp className="h-3 w-3" /> Live Gigs
+                <TrendingUp className="h-3 w-3" aria-hidden="true" /> Live Gigs
               </div>
               <h1 className="text-4xl lg:text-5xl font-extrabold text-primary font-headline uppercase tracking-tighter text-balance text-slate-900">Gig Marketplace</h1>
               <p className="text-muted-foreground text-lg max-w-xl">Browse verified musical performances and talent opportunities across Botswana.</p>
             </div>
             <div className="relative w-full md:max-w-md">
-              <Search className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
+              <Search className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" aria-hidden="true" />
               <Input 
                 placeholder="Search by venue or gig name..." 
                 className="pl-10 h-12 border-none shadow-sm bg-white"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
+                aria-label="Search musical gigs"
               />
             </div>
           </div>
         </header>
 
         {loading ? (
-          <div className="flex flex-col items-center justify-center py-24 gap-4">
+          <div className="flex flex-col items-center justify-center py-24 gap-4" aria-live="polite">
             <Loader2 className="h-10 w-10 animate-spin text-primary" />
             <p className="text-muted-foreground animate-pulse">Syncing marketplace data...</p>
           </div>
@@ -123,7 +142,7 @@ export default function PublicEventsPage() {
                       <div className="flex flex-col gap-1">
                         <Badge variant="secondary" className="text-[10px] font-bold uppercase tracking-widest w-fit">{event.experienceLevel}</Badge>
                         <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
-                          <Users className="h-3 w-3" /> {interestCount} Interested
+                          <Users className="h-3 w-3" aria-hidden="true" /> {interestCount} Interested
                         </div>
                       </div>
                       <div className="text-right">
@@ -136,10 +155,10 @@ export default function PublicEventsPage() {
                   <CardContent className="flex-1 space-y-6">
                     <div className="grid gap-3 text-xs text-muted-foreground font-medium">
                       <div className="flex items-center gap-2">
-                        <Calendar className="h-4 w-4 text-primary" /> {event.date}
+                        <Calendar className="h-4 w-4 text-primary" aria-hidden="true" /> {event.date}
                       </div>
                       <div className="flex items-center gap-2">
-                        <MapPin className="h-4 w-4 text-primary" /> {event.location}
+                        <MapPin className="h-4 w-4 text-primary" aria-hidden="true" /> {event.location}
                       </div>
                     </div>
                     <div className="flex flex-wrap gap-1.5">
@@ -158,12 +177,13 @@ export default function PublicEventsPage() {
                         size="sm" 
                         className={`px-3 ${isInterested ? 'text-red-500 hover:text-red-600' : 'text-muted-foreground hover:text-primary'}`}
                         onClick={() => handleToggleInterest(event)}
+                        aria-label={isInterested ? "Remove interest from this event" : "Mark as interested in this event"}
                       >
-                        <Heart className={`h-4 w-4 ${isInterested ? 'fill-red-500' : ''}`} />
+                        <Heart className={`h-4 w-4 ${isInterested ? 'fill-red-500' : ''}`} aria-hidden="true" />
                       </Button>
                       <Link href={user ? "/artist/events" : "/register"} className="flex-1">
                         <Button className="w-full font-bold uppercase tracking-widest gap-2 bg-primary h-9 text-[10px]">
-                          {user ? "Apply as Talent" : "Register to Apply"} <ArrowRight className="h-3 w-3" />
+                          {user ? "Apply as Talent" : "Register to Apply"} <ArrowRight className="h-3 w-3" aria-hidden="true" />
                         </Button>
                       </Link>
                     </div>
@@ -173,7 +193,7 @@ export default function PublicEventsPage() {
                         message={`Hi, I'm interested in tickets for "${event.title}" on ${event.date}. Saw this on GigConnect.`}
                         className="w-full bg-accent hover:bg-accent/90 text-white font-bold h-9 text-[10px] uppercase tracking-widest gap-2"
                       >
-                        <Ticket className="h-4 w-4" /> Buy Ticket (WhatsApp)
+                        <Ticket className="h-4 w-4" aria-hidden="true" /> Buy Ticket (WhatsApp)
                       </WhatsAppButton>
                     )}
                   </CardFooter>
@@ -185,7 +205,7 @@ export default function PublicEventsPage() {
           <Card className="border-dashed border-2 py-32 text-center bg-transparent max-w-2xl mx-auto">
              <CardContent className="space-y-4">
                 <div className="bg-primary/5 p-6 rounded-full w-fit mx-auto">
-                  <Music className="h-16 w-16 text-primary/20" />
+                  <Music className="h-16 w-16 text-primary/20" aria-hidden="true" />
                 </div>
                 <h3 className="text-2xl font-bold font-headline uppercase">No Active Gigs Found</h3>
                 <p className="text-muted-foreground">The marketplace is currently waiting for new verified listings. Check back shortly!</p>

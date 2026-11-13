@@ -2,26 +2,58 @@ import Link from 'next/link';
 import { ArrowLeft, ShieldAlert, Globe, Scale, Lock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: 'Terms and Conditions',
+  description: 'Read the GigConnect platform terms of service, including data residency and user responsibility policies.',
+  alternates: {
+    canonical: '/terms',
+  },
+};
 
 export default function TermsPage() {
+  const breadcrumbJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      {
+        '@type': 'ListItem',
+        position: 1,
+        name: 'Home',
+        item: 'https://gigconnect.bw',
+      },
+      {
+        '@type': 'ListItem',
+        position: 2,
+        name: 'Terms and Conditions',
+        item: 'https://gigconnect.bw/terms',
+      },
+    ],
+  };
+
   return (
     <div className="min-h-screen bg-secondary/10 py-12 px-4">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
+      />
       <div className="max-w-4xl mx-auto space-y-8">
         <header className="flex flex-col gap-4">
           <Link href="/register">
             <Button variant="ghost" size="sm" className="gap-2">
-              <ArrowLeft className="h-4 w-4" /> Back to Registration
+              <ArrowLeft className="h-4 w-4" aria-hidden="true" /> Back to Registration
             </Button>
           </Link>
           <h1 className="text-4xl font-bold text-primary font-headline uppercase">Terms and Conditions</h1>
-          <p className="text-muted-foreground italic text-lg">Last updated: May 2024</p>
+          <p className="text-muted-foreground italic text-lg">Last updated: {new Date().toLocaleDateString('en-BW', { month: 'long', year: 'numeric' })}</p>
         </header>
 
-        <div className="grid gap-6">
+        <main className="grid gap-6">
           <Card className="border-none shadow-md">
             <CardHeader className="bg-primary/5 border-b">
               <CardTitle className="flex items-center gap-2 text-xl">
-                <Globe className="h-5 w-5 text-primary" />
+                <Globe className="h-5 w-5 text-primary" aria-hidden="true" />
                 1. Data Storage & International Transfer
               </CardTitle>
             </CardHeader>
@@ -38,7 +70,7 @@ export default function TermsPage() {
           <Card className="border-none shadow-md">
             <CardHeader className="bg-primary/5 border-b">
               <CardTitle className="flex items-center gap-2 text-xl">
-                <Scale className="h-5 w-5 text-primary" />
+                <Scale className="h-5 w-5 text-primary" aria-hidden="true" />
                 2. Platform Role & Disclaimer
               </CardTitle>
             </CardHeader>
@@ -58,7 +90,7 @@ export default function TermsPage() {
           <Card className="border-none shadow-md">
             <CardHeader className="bg-primary/5 border-b">
               <CardTitle className="flex items-center gap-2 text-xl">
-                <ShieldAlert className="h-5 w-5 text-primary" />
+                <ShieldAlert className="h-5 w-5 text-primary" aria-hidden="true" />
                 3. Limitation of Liability
               </CardTitle>
             </CardHeader>
@@ -78,7 +110,7 @@ export default function TermsPage() {
           <Card className="border-none shadow-md">
             <CardHeader className="bg-primary/5 border-b">
               <CardTitle className="flex items-center gap-2 text-xl">
-                <Lock className="h-5 w-5 text-primary" />
+                <Lock className="h-5 w-5 text-primary" aria-hidden="true" />
                 4. Account Security & Verification
               </CardTitle>
             </CardHeader>
@@ -94,7 +126,7 @@ export default function TermsPage() {
               </ul>
             </CardContent>
           </Card>
-        </div>
+        </main>
 
         <footer className="text-center pt-8">
           <p className="text-sm text-muted-foreground">

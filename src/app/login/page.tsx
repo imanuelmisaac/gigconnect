@@ -1,5 +1,3 @@
-"use client"
-
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -14,6 +12,13 @@ import { Briefcase, ArrowLeft, Loader2, KeyRound, Mail, RefreshCw, AlertTriangle
 import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: 'Login',
+  description: 'Access your GigConnect professional account.',
+  robots: 'noindex, nofollow',
+};
 
 const ADMIN_UID = 'rJq93j6Mi5NuAPEPNDYpLtSgFfc2';
 
@@ -167,16 +172,16 @@ export default function LoginPage() {
     <div className="min-h-screen flex flex-col bg-secondary/20">
       <div className="p-4">
         <Link href="/" className="inline-flex items-center text-sm text-muted-foreground hover:text-primary transition-colors">
-          <ArrowLeft className="mr-2 h-4 w-4" />
+          <ArrowLeft className="mr-2 h-4 w-4" aria-hidden="true" />
           Back to Home
         </Link>
       </div>
-      <div className="flex-1 flex items-center justify-center p-4">
+      <main className="flex-1 flex items-center justify-center p-4">
         <div className="w-full max-w-md space-y-8 slide-up">
           <div className="text-center space-y-2">
             <div className="flex justify-center">
               <div className="bg-primary p-3 rounded-xl shadow-lg">
-                <Briefcase className="h-8 w-8 text-white" />
+                <Briefcase className="h-8 w-8 text-white" aria-hidden="true" />
               </div>
             </div>
             <h1 className="text-3xl font-bold tracking-tight text-primary font-headline">Welcome Back</h1>
@@ -185,7 +190,7 @@ export default function LoginPage() {
 
           {setupError && (
             <Alert variant="destructive" className="bg-red-50 border-red-200">
-              <AlertTriangle className="h-4 w-4" />
+              <AlertTriangle className="h-4 w-4" aria-hidden="true" />
               <AlertTitle className="font-bold">Login Issue</AlertTitle>
               <AlertDescription>
                 {setupError}
@@ -195,7 +200,7 @@ export default function LoginPage() {
 
           {isUnverified && (
             <Alert variant="destructive" className="bg-destructive/10 border-destructive/20">
-              <Mail className="h-4 w-4" />
+              <Mail className="h-4 w-4" aria-hidden="true" />
               <AlertTitle>Verification Required</AlertTitle>
               <AlertDescription className="space-y-3">
                 <p>Your email is not verified. Please check your inbox for the activation link.</p>
@@ -232,6 +237,7 @@ export default function LoginPage() {
                     className="h-11"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
+                    autoComplete="email"
                   />
                 </div>
                 <div className="grid gap-2">
@@ -282,13 +288,15 @@ export default function LoginPage() {
                       className="h-11 pr-10"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
+                      autoComplete="current-password"
                     />
                     <button
                       type="button"
                       className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-primary transition-colors"
                       onClick={() => setShowPassword(!showPassword)}
+                      aria-label={showPassword ? "Hide password" : "Show password"}
                     >
-                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      {showPassword ? <EyeOff className="h-4 w-4" aria-hidden="true" /> : <Eye className="h-4 w-4" aria-hidden="true" />}
                     </button>
                   </div>
                 </div>
@@ -297,7 +305,7 @@ export default function LoginPage() {
                 <Button type="submit" className="w-full h-11 bg-primary text-lg" disabled={loading}>
                   {loading ? (
                     <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
                       Logging in...
                     </>
                   ) : (
@@ -314,7 +322,7 @@ export default function LoginPage() {
             </form>
           </Card>
         </div>
-      </div>
+      </main>
     </div>
   );
 }
