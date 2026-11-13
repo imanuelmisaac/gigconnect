@@ -96,7 +96,7 @@ export default function TermsPage() {
             </CardHeader>
             <CardContent className="pt-6 prose prose-slate max-w-none text-sm leading-relaxed">
               <p>
-                To the maximum extent permitted by law, GigConnect and its creator (Mogakolodi Ranthokwane) shall not be liable for any direct, indirect, incidental, or consequential damages resulting from:
+                To the maximum extent permitted by law, GigConnect and its operators shall not be liable for any direct, indirect, incidental, or consequential damages resulting from:
               </p>
               <ul className="list-disc pl-5 space-y-2">
                 <li>Disputes between users (e.g., non-payment for a gig, artist no-shows).</li>

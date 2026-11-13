@@ -21,7 +21,7 @@ export const metadata: Metadata = {
   },
   description: 'The home for Batswana musical excellence. Find gigs, hire professional DJs and artists, and buy event tickets across Botswana.',
   keywords: ['Botswana music', 'Gaborone events', 'Amapiano Botswana', 'Motswako', 'Hire DJ Botswana', 'GigConnect', 'Botswana Gigs'],
-  authors: [{ name: 'Mogakolodi Ranthokwane' }],
+  authors: [{ name: 'GigConnect Team' }],
   alternates: {
     canonical: '/',
   },
