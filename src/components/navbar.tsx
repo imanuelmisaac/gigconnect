@@ -1,5 +1,8 @@
+
+'use client';
+
 import Link from 'next/link';
-import { Briefcase, Music } from 'lucide-react';
+import { Briefcase, Music, Ticket } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 export function Navbar() {
@@ -14,6 +17,10 @@ export function Navbar() {
           <Link href="/events" className="text-sm font-bold text-muted-foreground hover:text-primary transition-colors hidden sm:flex items-center gap-1.5 uppercase tracking-widest">
             <Music className="h-3.5 w-3.5" />
             Explore Gigs
+          </Link>
+          <Link href="/tickets" className="text-sm font-bold text-muted-foreground hover:text-primary transition-colors hidden sm:flex items-center gap-1.5 uppercase tracking-widest">
+            <Ticket className="h-3.5 w-3.5" />
+            Buy Tickets
           </Link>
           <div className="flex items-center space-x-3">
             <Link href="/login">

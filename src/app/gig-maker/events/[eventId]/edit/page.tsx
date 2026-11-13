@@ -12,7 +12,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Calendar as CalendarIcon, MapPin, Users, Briefcase, Loader2, ArrowLeft, Save } from 'lucide-react';
+import { Calendar as CalendarIcon, MapPin, Users, Loader2, ArrowLeft, Save, Ticket } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
 
@@ -42,7 +42,8 @@ export default function EditEventPage() {
     maxPrice: '',
     experienceLevel: 'Upcoming',
     genres: [] as string[],
-    status: 'Open'
+    status: 'Open',
+    ticketWhatsApp: '',
   });
 
   const eventRef = useMemo(() => {
@@ -69,7 +70,8 @@ export default function EditEventPage() {
         maxPrice: event.maxPrice?.toString() || '',
         experienceLevel: event.experienceLevel || 'Upcoming',
         genres: event.genres || [],
-        status: event.status || 'Open'
+        status: event.status || 'Open',
+        ticketWhatsApp: event.ticketWhatsApp || '',
       });
       setIsInitialized(true);
     }
@@ -233,6 +235,19 @@ export default function EditEventPage() {
                       <SelectItem value="Established">Established / Professional</SelectItem>
                     </SelectContent>
                   </Select>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border-none shadow-md">
+              <CardHeader><CardTitle className="text-xl">Ticketing</CardTitle></CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="ticketWhatsApp">WhatsApp for Ticket Sales</Label>
+                  <div className="relative">
+                    <Ticket className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                    <Input id="ticketWhatsApp" placeholder="+267..." className="pl-10" value={formData.ticketWhatsApp} onChange={handleInputChange} />
+                  </div>
                 </div>
               </CardContent>
             </Card>

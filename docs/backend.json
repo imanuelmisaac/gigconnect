@@ -221,6 +221,15 @@
           ],
           "description": "Optimistically complete on creation, but admin can mark as incomplete"
         },
+        "ticketWhatsApp": {
+          "type": "string",
+          "description": "WhatsApp number for ticket sales"
+        },
+        "interestedUsers": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "List of user IDs interested in this event"
+        },
         "listingExpiresAt": {
           "type": "string",
           "format": "date-time",

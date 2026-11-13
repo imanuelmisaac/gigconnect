@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
@@ -9,9 +10,8 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Calendar as CalendarIcon, MapPin, Users, Loader2, ArrowLeft, CreditCard, MessageSquare, CheckCircle2, Star, Sparkles, Tag } from 'lucide-react';
+import { Calendar as CalendarIcon, MapPin, Users, Loader2, ArrowLeft, CreditCard, MessageSquare, Star, Sparkles, Tag, Ticket } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
 import { WhatsAppButton } from '@/components/whatsapp-button';
@@ -46,6 +46,7 @@ export default function CreateEventPage() {
     maxPrice: '',
     experienceLevel: 'Upcoming',
     genres: [] as string[],
+    ticketWhatsApp: '',
   });
 
   const { data: systemConfig } = useDoc(doc(db, 'system', 'config'));
@@ -118,6 +119,8 @@ export default function CreateEventPage() {
         maxPrice: Number(formData.maxPrice),
         experienceLevel: formData.experienceLevel,
         genres: formData.genres,
+        ticketWhatsApp: formData.ticketWhatsApp,
+        interestedUsers: [],
         status: 'Open',
         paymentStatus: 'Complete', 
         listingExpiresAt: expiresAt.toISOString(),
@@ -125,7 +128,7 @@ export default function CreateEventPage() {
         updatedAt: serverTimestamp(),
       };
       await setDoc(eventRef, eventData);
-      toast({ title: "Event Published!", description: "Your gig is now visible to all verified talent." });
+      toast({ title: "Event Published!", description: "Your gig is now visible to all verified talent and ticket buyers." });
       setShowPaymentModal(false);
       setShowSuggestions(true);
     } catch (error: any) {
@@ -150,7 +153,7 @@ export default function CreateEventPage() {
         </Link>
         <div className="space-y-2">
           <h1 className="text-3xl font-bold tracking-tight text-primary font-headline">Create New Event</h1>
-          <p className="text-muted-foreground">Fill in the details to find the perfect talent for your gig.</p>
+          <p className="text-muted-foreground">Fill in the details to find the perfect talent and sell tickets.</p>
         </div>
         <form onSubmit={handlePreSubmit}>
           <div className="grid gap-6">
@@ -215,6 +218,20 @@ export default function CreateEventPage() {
               </CardContent>
             </Card>
 
+            <Card className="border-none shadow-md">
+              <CardHeader><CardTitle className="text-xl">Ticketing</CardTitle></CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="ticketWhatsApp">WhatsApp for Ticket Sales</Label>
+                  <div className="relative">
+                    <Ticket className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                    <Input id="ticketWhatsApp" placeholder="+267..." className="pl-10" value={formData.ticketWhatsApp} onChange={handleInputChange} />
+                  </div>
+                  <p className="text-[10px] text-muted-foreground">Customers will be redirected to this number to purchase tickets.</p>
+                </div>
+              </CardContent>
+            </Card>
+
             <div className="flex justify-end gap-4 pb-12">
               <Button type="submit" className="px-8 bg-primary">Proceed to Payment</Button>
             </div>
@@ -239,7 +256,7 @@ export default function CreateEventPage() {
               <div className="flex items-center justify-between border-b pb-2"><span>Orange Money</span><span className="font-black text-primary">76479543</span></div>
             </div>
             <div className="bg-primary/5 p-4 rounded-xl border border-primary/20 space-y-3">
-              <WhatsAppButton phoneNumber="+26774266208" message={`Hi, I've just paid P{currentFee} for my event "${formData.title}".`} className="w-full bg-green-600 hover:bg-green-700 text-white font-bold h-9" size="sm" onClick={() => {
+              <WhatsAppButton phoneNumber="+26774266208" message={`Hi, I've just paid P${currentFee} for my event "${formData.title}".`} className="w-full bg-green-600 hover:bg-green-700 text-white font-bold h-9" size="sm" onClick={() => {
                 setHasSentScreenshot(true);
                 toast({ title: "WhatsApp Redirect", description: "Send your payment confirmation to the admin." });
               }}>Send Screenshot</WhatsAppButton>

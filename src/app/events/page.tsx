@@ -1,28 +1,33 @@
-"use client"
+
+'use client';
 
 import { useMemo, useState } from 'react';
-import { useFirestore, useCollection } from '@/firebase';
-import { collection, query, where, orderBy } from 'firebase/firestore';
+import { useUser, useFirestore, useCollection } from '@/firebase';
+import { collection, query, where, orderBy, doc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { 
   Loader2, 
   Calendar, 
   MapPin, 
   Search, 
-  Filter,
-  Music,
+  Music, 
   ArrowRight,
   TrendingUp,
-  CreditCard
+  CreditCard,
+  Users,
+  Heart
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Navbar } from '@/components/navbar';
+import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
 
 export default function PublicEventsPage() {
+  const { user } = useUser();
   const db = useFirestore();
+  const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState('');
 
   const eventsQuery = useMemo(() => {
@@ -44,6 +49,23 @@ export default function PublicEventsPage() {
       e.location?.toLowerCase().includes(searchTerm.toLowerCase())
     );
   }, [events, searchTerm]);
+
+  const handleToggleInterest = async (event: any) => {
+    if (!user) {
+      toast({ title: "Login Required", description: "Please log in to show interest." });
+      return;
+    }
+    const eventId = event.id || event.eventId;
+    const isInterested = event.interestedUsers?.includes(user.uid);
+    const eventRef = doc(db, 'events', eventId);
+    try {
+      await updateDoc(eventRef, {
+        interestedUsers: isInterested ? arrayRemove(user.uid) : arrayUnion(user.uid)
+      });
+    } catch (e) {
+      toast({ variant: "destructive", title: "Error", description: "Could not update interest." });
+    }
+  };
 
   return (
     <div className="min-h-screen bg-secondary/10">
@@ -77,46 +99,63 @@ export default function PublicEventsPage() {
           </div>
         ) : filteredEvents.length > 0 ? (
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {filteredEvents.map((event: any) => (
-              <Card key={event.id} className="border-none shadow-md hover:shadow-xl transition-all overflow-hidden flex flex-col slide-up group">
-                <div className="h-2 bg-primary group-hover:bg-accent transition-colors" />
-                <CardHeader>
-                  <div className="flex justify-between items-start mb-2">
-                    <Badge variant="secondary" className="text-[10px] font-bold uppercase tracking-widest">{event.experienceLevel}</Badge>
-                    <div className="text-right">
-                      <p className="text-[9px] font-bold text-muted-foreground uppercase">Budget Up To</p>
-                      <p className="text-sm font-black text-green-600">P{event.maxPrice}</p>
+            {filteredEvents.map((event: any) => {
+              const interestCount = event.interestedUsers?.length || 0;
+              const isInterested = user && event.interestedUsers?.includes(user.uid);
+              return (
+                <Card key={event.id} className="border-none shadow-md hover:shadow-xl transition-all overflow-hidden flex flex-col slide-up group">
+                  <div className="h-2 bg-primary group-hover:bg-accent transition-colors" />
+                  <CardHeader>
+                    <div className="flex justify-between items-start mb-2">
+                      <div className="flex flex-col gap-1">
+                        <Badge variant="secondary" className="text-[10px] font-bold uppercase tracking-widest w-fit">{event.experienceLevel}</Badge>
+                        <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
+                          <Users className="h-3 w-3" /> {interestCount} Interested
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-[9px] font-bold text-muted-foreground uppercase">Budget Up To</p>
+                        <p className="text-sm font-black text-green-600">P{event.maxPrice}</p>
+                      </div>
                     </div>
-                  </div>
-                  <CardTitle className="text-xl font-headline group-hover:text-primary transition-colors">{event.title}</CardTitle>
-                </CardHeader>
-                <CardContent className="flex-1 space-y-6">
-                  <div className="grid gap-3 text-xs text-muted-foreground font-medium">
-                    <div className="flex items-center gap-2">
-                      <Calendar className="h-4 w-4 text-primary" /> {event.date}
+                    <CardTitle className="text-xl font-headline group-hover:text-primary transition-colors">{event.title}</CardTitle>
+                  </CardHeader>
+                  <CardContent className="flex-1 space-y-6">
+                    <div className="grid gap-3 text-xs text-muted-foreground font-medium">
+                      <div className="flex items-center gap-2">
+                        <Calendar className="h-4 w-4 text-primary" /> {event.date}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <MapPin className="h-4 w-4 text-primary" /> {event.location}
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <MapPin className="h-4 w-4 text-primary" /> {event.location}
+                    <div className="flex flex-wrap gap-1.5">
+                      {event.genres?.map((g: string) => (
+                        <Badge key={g} variant="outline" className="text-[9px] py-0 border-primary/20 text-primary">{g}</Badge>
+                      ))}
                     </div>
-                  </div>
-                  <div className="flex flex-wrap gap-1.5">
-                    {event.genres?.map((g: string) => (
-                      <Badge key={g} variant="outline" className="text-[9px] py-0 border-primary/20 text-primary">{g}</Badge>
-                    ))}
-                  </div>
-                  <p className="text-sm text-muted-foreground line-clamp-3 italic">
-                    &quot;{event.description || 'Join us for a professional performance set.'}&quot;
-                  </p>
-                </CardContent>
-                <CardFooter className="bg-muted/30 pt-6">
-                  <Link href="/login" className="w-full">
-                    <Button className="w-full font-bold uppercase tracking-widest gap-2 bg-primary">
-                      Apply to Perform <ArrowRight className="h-4 w-4" />
+                    <p className="text-sm text-muted-foreground line-clamp-3 italic">
+                      &quot;{event.description || 'Join us for a professional performance set.'}&quot;
+                    </p>
+                  </CardContent>
+                  <CardFooter className="bg-muted/30 pt-6 flex gap-2">
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className={`px-3 ${isInterested ? 'text-red-500' : ''}`}
+                      onClick={() => handleToggleInterest(event)}
+                    >
+                      <Heart className={`h-4 w-4 ${isInterested ? 'fill-red-500' : ''}`} />
                     </Button>
-                  </Link>
-                </CardFooter>
-              </Card>
-            ))}
+                    <Link href="/login" className="flex-1">
+                      <Button className="w-full font-bold uppercase tracking-widest gap-2 bg-primary h-9">
+                        Apply to Perform <ArrowRight className="h-4 w-4" />
+                      </Button>
+                    </Link>
+                  </CardFooter>
+                </Card>
+              );
+            })}
           </div>
         ) : (
           <Card className="border-dashed border-2 py-32 text-center bg-transparent max-w-2xl mx-auto">
@@ -126,11 +165,6 @@ export default function PublicEventsPage() {
                 </div>
                 <h3 className="text-2xl font-bold font-headline uppercase">No Active Gigs Found</h3>
                 <p className="text-muted-foreground">The marketplace is currently waiting for new verified listings. Check back shortly!</p>
-                <Link href="/gig-maker/create-event">
-                  <Button variant="outline" className="font-bold gap-2 mt-4">
-                    Host an Event <CreditCard className="h-4 w-4" />
-                  </Button>
-                </Link>
              </CardContent>
           </Card>
         )}

@@ -1,7 +1,8 @@
+
 import Link from 'next/link';
 import { Navbar } from '@/components/navbar';
 import { Button } from '@/components/ui/button';
-import { Briefcase, Shield, Zap, Globe, Music, Star } from 'lucide-react';
+import { Briefcase, Zap, Globe, Music, Star, Ticket, Users } from 'lucide-react';
 import Image from 'next/image';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 
@@ -21,10 +22,10 @@ export default function Home() {
                 Made by Motswana for Batswana
               </div>
               <h1 className="text-5xl lg:text-6xl font-extrabold tracking-tight text-primary leading-tight font-headline">
-                Empowering <span className="text-accent">Batswana</span> Talent Everywhere
+                The Beat of <span className="text-accent">Botswana</span> Connects Here
               </h1>
               <p className="text-xl text-muted-foreground max-w-lg">
-                GigConnect provides convenience for both event makers and talented Batswana artists. We bridge the gap between local craft and professional opportunities.
+                GigConnect is the home for Batswana musical excellence. Whether you are an artist seeking gigs, an organizer hiring talent, or a fan looking for tickets—we bring everyone together.
               </p>
               <div className="flex flex-col sm:flex-row gap-4">
                 <Link href="/register">
@@ -32,9 +33,9 @@ export default function Home() {
                     Join the Movement
                   </Button>
                 </Link>
-                <Link href="/artist/events">
-                  <Button size="lg" variant="outline" className="w-full sm:w-auto text-lg h-12 px-8">
-                    Browse Gigs
+                <Link href="/tickets">
+                  <Button size="lg" className="w-full sm:w-auto text-lg h-12 px-8 bg-accent text-white hover:bg-accent/90">
+                    Buy Tickets <Ticket className="ml-2 h-5 w-5" />
                   </Button>
                 </Link>
               </div>
@@ -58,25 +59,25 @@ export default function Home() {
         <section className="py-24 bg-background">
           <div className="container mx-auto px-4">
             <div className="text-center max-w-3xl mx-auto mb-16 space-y-4">
-              <h2 className="text-3xl lg:text-4xl font-bold text-primary font-headline">Local Pride, Professional Reach</h2>
-              <p className="text-lg text-muted-foreground">Built in Botswana to support our vibrant musical ecosystem.</p>
+              <h2 className="text-3xl lg:text-4xl font-bold text-primary font-headline">A Complete Musical Ecosystem</h2>
+              <p className="text-lg text-muted-foreground">From the first application to the final ticket sold.</p>
             </div>
             <div className="grid md:grid-cols-3 gap-8">
               {[
                 {
                   icon: <Music className="h-10 w-10 text-accent" />,
-                  title: "Batswana First",
-                  description: "Designed specifically to solve the unique challenges faced by artists and DJs in Botswana."
+                  title: "Talent Discovery",
+                  description: "Artists and DJs can find professional gigs and collaboration opportunities across the country."
                 },
                 {
-                  icon: <Zap className="h-10 w-10 text-accent" />,
-                  title: "Seamless Convenience",
-                  description: "Apply for gigs or hire talent with just a few clicks. We handle the logistics so you can focus on the music."
+                  icon: <Ticket className="h-10 w-10 text-accent" />,
+                  title: "Ticket Marketplace",
+                  description: "Fans can discover upcoming events and buy tickets directly from verified organizers via WhatsApp."
                 },
                 {
-                  icon: <Globe className="h-10 w-10 text-accent" />,
-                  title: "Bodiragatsi Spirit",
-                  description: "Rooted in the excellence and creative drive of our local communities."
+                  icon: <Users className="h-10 w-10 text-accent" />,
+                  title: "Community Interest",
+                  description: "See what's trending. Track how many people are interested in events and build hype for your shows."
                 }
               ].map((feature, i) => (
                 <div key={i} className="p-8 rounded-xl border bg-card shadow-sm hover:shadow-md transition-shadow space-y-4">
