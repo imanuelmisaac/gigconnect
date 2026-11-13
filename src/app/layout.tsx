@@ -34,7 +34,7 @@ export const metadata: Metadata = {
     description: 'Find talent, discover gigs, and buy tickets for the best events in Botswana.',
     images: [
       {
-        url: '/og-image.jpg',
+        url: 'https://picsum.photos/seed/gigconnect-og/1200/630',
         width: 1200,
         height: 630,
         alt: 'GigConnect Botswana',
@@ -45,7 +45,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'GigConnect | Botswana Musical Talent Hub',
     description: 'Discover the best talent and events in Botswana.',
-    images: ['/og-image.jpg'],
+    images: ['https://picsum.photos/seed/gigconnect-og/1200/630'],
   },
   robots: {
     index: true,

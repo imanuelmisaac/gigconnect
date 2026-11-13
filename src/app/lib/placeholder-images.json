@@ -1,17 +1,16 @@
-
 {
   "placeholderImages": [
     {
       "id": "hero-bg",
-      "description": "Professional team working together",
-      "imageUrl": "https://picsum.photos/seed/gigconnect-hero/1200/800",
-      "imageHint": "professional networking"
+      "description": "Botswana musical performance atmosphere",
+      "imageUrl": "https://picsum.photos/seed/gigconnect-hero-live/1200/800",
+      "imageHint": "concert stage"
     },
     {
       "id": "login-bg",
-      "description": "Abstract blue technology background",
-      "imageUrl": "https://picsum.photos/seed/gigconnect-login/800/600",
-      "imageHint": "abstract blue"
+      "description": "Abstract musical rhythms",
+      "imageUrl": "https://picsum.photos/seed/gigconnect-login-live/800/600",
+      "imageHint": "sound waves"
     }
   ]
 }
