@@ -4,15 +4,19 @@ GigConnect is Botswana's premier musical talent and event ticketing marketplace.
 
 ## 🚀 Deployment Instructions
 
-If you encounter a `task type` error when clicking the "Deploy" button in the UI, use the terminal to trigger the deployment:
+If you encounter a `task type` error when clicking the "Deploy" button in the UI, use the terminal to trigger the deployment manually:
 
-### 1. Manual Build
+### 1. Ensure correct project context
+```bash
+firebase use gigconnect-ac1f9
+```
+
+### 2. Manual Build
 ```bash
 npm run build
 ```
 
-### 2. Manual Deployment
-Ensure you have the Firebase CLI logged in, then run:
+### 3. Manual Deployment
 ```bash
 firebase deploy
 ```
