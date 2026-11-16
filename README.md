@@ -2,24 +2,25 @@
 
 GigConnect is Botswana's premier musical talent and event ticketing marketplace.
 
-## 🚀 Deployment Instructions
+## 🚀 Project Selection & Deployment
 
-If you encounter a `task type` error when clicking the "Deploy" button in the UI, use the terminal to trigger the deployment manually:
+To select or switch the project you are using for deployment, follow these steps:
 
-### 1. Ensure correct project context
+### 1. Select Project via CLI
+If you are shifting from an old project (like `keifirebase`) to the production project, run this in the terminal:
 ```bash
 firebase use gigconnect-ac1f9
 ```
 
-### 2. Manual Build
+### 2. Manual Build & Deploy
+If the UI "Deploy" button throws an error, use the manual path:
 ```bash
 npm run build
-```
-
-### 3. Manual Deployment
-```bash
 firebase deploy
 ```
+
+### 3. Verify Configuration
+Ensure `src/firebase/config.ts` matches your active Firebase project credentials.
 
 ## 🛠 Tech Stack
 - **Framework**: Next.js 15 (App Router)
