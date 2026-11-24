@@ -14,7 +14,7 @@ export default function Home() {
     name: 'GigConnect',
     url: 'https://gigconnect.bw',
     logo: 'https://gigconnect.bw/logo.png',
-    description: 'Botswana’s premier musical talent and event ticketing marketplace.',
+    description: 'Botswana\'s premier musical talent and event ticketing marketplace.',
     sameAs: [
       'https://facebook.com/gigconnectbw',
       'https://instagram.com/gigconnectbw',
@@ -45,11 +45,11 @@ export default function Home() {
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
-      />
+      ></script>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteJsonLd) }}
-      />
+      ></script>
       <Navbar />
       <main className="flex-1">
         {/* Hero Section */}
@@ -130,7 +130,7 @@ export default function Home() {
                 {
                   icon: <Users className="h-10 w-10 text-accent" aria-hidden="true" />,
                   title: "Talent Discovery",
-                  description: "Connect with verified Artists and DJs who ready to elevate your event experience."
+                  description: "Connect with verified Artists and DJs who are ready to elevate your event experience."
                 },
                 {
                   icon: <Ticket className="h-10 w-10 text-accent" aria-hidden="true" />,
@@ -171,7 +171,7 @@ export default function Home() {
               <li><Link href="/tickets" className="hover:text-accent transition-colors">Buy Tickets</Link></li>
               <li><Link href="/terms" className="hover:text-accent transition-colors">Terms</Link></li>
             </ul>
-            <p className="text-[10px] text-slate-500">© {new Date().getFullYear()} GigConnect Botswana. Empowering local excellence.</p>
+            <p className="text-[10px] text-slate-500">&copy; {new Date().getFullYear()} GigConnect Botswana. Empowering local excellence.</p>
           </nav>
         </div>
       </footer>
